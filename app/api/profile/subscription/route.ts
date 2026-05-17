@@ -42,10 +42,10 @@ export async function POST(request: Request) {
     id: user._id.toString(),
     name: user.name,
     email: user.email,
-    phone: user.phone,
+    phone: user.phone ?? undefined,
     role: user.role,
-    subscriptionStatus: user.subscriptionStatus || "pending",
-    subscriptionActive: Boolean(user.subscriptionStatus === "verified"),
+    subscriptionStatus: "pending" as const,
+    subscriptionActive: false,
     subscriptionPhone: user.subscriptionPhone || ""
   };
 

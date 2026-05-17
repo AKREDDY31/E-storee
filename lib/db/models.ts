@@ -1,4 +1,4 @@
-import { Schema, model, models, type InferSchemaType } from "mongoose";
+import { Schema, model, models, type InferSchemaType, type Model } from "mongoose";
 
 const userSchema = new Schema(
   {
@@ -162,12 +162,14 @@ const settingsSchema = new Schema(
   { timestamps: true }
 );
 
-export const UserModel = models.User || model("User", userSchema);
-export const ProductModel = models.Product || model("Product", productSchema);
-export const OrderModel = models.Order || model("Order", orderSchema);
-export const RefundModel = models.Refund || model("Refund", refundSchema);
-export const SettingsModel = models.Settings || model("Settings", settingsSchema);
-
 export type UserDocument = InferSchemaType<typeof userSchema>;
 export type ProductDocument = InferSchemaType<typeof productSchema>;
 export type OrderDocument = InferSchemaType<typeof orderSchema>;
+export type RefundDocument = InferSchemaType<typeof refundSchema>;
+export type SettingsDocument = InferSchemaType<typeof settingsSchema>;
+
+export const UserModel = (models.User as Model<UserDocument>) || model<UserDocument>("User", userSchema);
+export const ProductModel = (models.Product as Model<ProductDocument>) || model<ProductDocument>("Product", productSchema);
+export const OrderModel = (models.Order as Model<OrderDocument>) || model<OrderDocument>("Order", orderSchema);
+export const RefundModel = (models.Refund as Model<RefundDocument>) || model<RefundDocument>("Refund", refundSchema);
+export const SettingsModel = (models.Settings as Model<SettingsDocument>) || model<SettingsDocument>("Settings", settingsSchema);

@@ -21,15 +21,15 @@ export function normalizePhoneNumber(value: string) {
 }
 
 export function formatAddressLine(address?: {
-  fullName?: string;
-  phone?: string;
-  line1?: string;
-  line2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  landmark?: string;
-}) {
+  fullName?: string | null;
+  phone?: string | null;
+  line1?: string | null;
+  line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  landmark?: string | null;
+} | null) {
   if (!address) return "";
 
   const parts = [

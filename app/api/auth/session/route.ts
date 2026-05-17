@@ -18,7 +18,7 @@ export async function GET() {
           id: session.id,
           name: user.name,
           email: user.email,
-          phone: user.phone,
+          phone: user.phone ?? undefined,
           role: user.role,
           subscriptionStatus: user.subscriptionStatus || "inactive",
           subscriptionActive: Boolean(user.subscriptionStatus === "verified"),

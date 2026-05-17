@@ -4,7 +4,17 @@ import { formatCurrency } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
 import { ProductCard } from "@/components/store/product-card";
 
-export function HomeSections({ products }: { products: ProductCardData[] }) {
+export function HomeSections({
+  products,
+  whatsappNumber = BRAND.whatsapp,
+  customerAddress,
+  siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+}: {
+  products: ProductCardData[];
+  whatsappNumber?: string;
+  customerAddress?: string;
+  siteUrl?: string;
+}) {
   const featured = products.slice(0, 4);
 
   return (
@@ -20,7 +30,13 @@ export function HomeSections({ products }: { products: ProductCardData[] }) {
           </div>
           <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
             {featured.map((product) => (
-              <ProductCard key={product.itemCode} product={product} />
+              <ProductCard
+                key={product.itemCode}
+                product={product}
+                whatsappNumber={whatsappNumber}
+                customerAddress={customerAddress}
+                productUrl={`${siteUrl}/shop/${product.slug}`}
+              />
             ))}
           </div>
         </div>

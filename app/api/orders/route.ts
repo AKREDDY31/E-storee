@@ -102,10 +102,15 @@ export async function POST(request: Request) {
     }))
   });
 
+  const customerName = order.customer?.name ?? parsed.data.customer.name;
+  const customerPhone = order.customer?.phone ?? parsed.data.customer.phone;
+  const customerEmail = order.customer?.email ?? parsed.data.customer.email;
+  const address = order.shippingAddress ?? parsed.data.shippingAddress;
+
   const adminSummary = [
     `New order: ${order.orderNumber}`,
-    `Customer: ${order.customer.name} | ${order.customer.phone} | ${order.customer.email}`,
-    `Address: ${formatAddressLine(order.shippingAddress)}`,
+    `Customer: ${customerName} | ${customerPhone} | ${customerEmail}`,
+    `Address: ${formatAddressLine(address)}`,
     `Items: ${order.items.map((item) => `${item.name} x ${item.quantity}`).join("; ")}`,
     `Total: ${order.total}`,
     `Payment: ${order.paymentMethod} | ${order.paymentStatus}`,
