@@ -36,21 +36,28 @@ export function HomeAuthClient() {
             role: "user"
           };
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    const data = await response.json();
-    setLoading(false);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body)
+      });
 
-    if (!response.ok) {
-      setError(data.error || "Authentication failed");
-      return;
+      const data = (await response.json().catch(() => null)) as { user?: unknown; error?: string } | null;
+
+      if (!response.ok) {
+        setError(data?.error || "Authentication failed");
+        return;
+      }
+
+      setSession((data?.user as any) ?? null);
+      router.push("/shop");
+    } catch {
+      setError("Unable to reach server. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setSession(data.user);
-    router.push("/shop");
   }
 
   return (
