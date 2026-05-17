@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { authCookieName, createSessionToken, getCurrentSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
 import { UserModel } from "@/lib/db/models";
@@ -49,13 +48,13 @@ export async function POST(request: Request) {
     subscriptionPhone: user.subscriptionPhone || ""
   };
 
-  const cookieStore = await cookies();
-  cookieStore.set(authCookieName, createSessionToken(updatedSession), {
+  const response = NextResponse.json({ user: updatedSession });
+  response.cookies.set(authCookieName, createSessionToken(updatedSession), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/"
   });
 
-  return NextResponse.json({ user: updatedSession });
+  return response;
 }

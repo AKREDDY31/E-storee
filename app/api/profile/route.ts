@@ -46,16 +46,17 @@ export async function PATCH(request: Request) {
     subscriptionPhone: user.subscriptionPhone || ""
   };
 
-  const cookieStore = await cookies();
-  cookieStore.set(authCookieName, createSessionToken(updatedSession), {
+  const response = NextResponse.json({
+    user: updatedSession,
+    address: user.address
+  });
+
+  response.cookies.set(authCookieName, createSessionToken(updatedSession), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/"
   });
 
-  return NextResponse.json({
-    user: updatedSession,
-    address: user.address
-  });
+  return response;
 }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getCurrentSession, createSessionToken } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
 import { UserModel } from "@/lib/db/models";
-import { cookies } from "next/headers";
 import { authCookieName } from "@/lib/auth";
 
 export async function PATCH(
@@ -48,9 +47,9 @@ export async function PATCH(
     subscriptionPhone: user.subscriptionPhone || ""
   };
 
-  const cookieStore = await cookies();
+  const response = NextResponse.json({ user: JSON.parse(JSON.stringify(user)) });
   if (session.id === updatedSession.id) {
-    cookieStore.set(authCookieName, createSessionToken(updatedSession), {
+    response.cookies.set(authCookieName, createSessionToken(updatedSession), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -58,5 +57,5 @@ export async function PATCH(
     });
   }
 
-  return NextResponse.json({ user: JSON.parse(JSON.stringify(user)) });
+  return response;
 }
