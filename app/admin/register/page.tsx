@@ -1,5 +1,5 @@
-import { AdminAuthShell } from "@/components/admin/admin-auth-shell";
+import { AuthForm } from "@/components/store/auth-form";
 
 export default function AdminRegisterPage() {
-  return <AdminAuthShell mode="register" title="Admin registration" />;
+  return <AuthForm mode="register" role="admin" title="Admin registration" variant="admin" />;
 }

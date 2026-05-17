@@ -8,11 +8,13 @@ import { useAuth } from "@/components/providers/auth-provider";
 export function AuthForm({
   mode,
   role,
-  title
+  title,
+  variant = "default"
 }: {
   mode: "login" | "register";
   role: "user" | "admin";
   title: string;
+  variant?: "default" | "admin";
 }) {
   const router = useRouter();
   const { setSession } = useAuth();
@@ -81,14 +83,16 @@ export function AuthForm({
 
   return (
     <div className="container section" style={{ display: "grid", placeItems: "center" }}>
-      <div className="panel" style={{ width: "min(100%, 920px)", overflow: "hidden", display: "grid", gridTemplateColumns: "1fr minmax(320px, 420px)" }}>
-        <div style={{ padding: 30, background: "linear-gradient(135deg, rgba(13,79,60,0.96), rgba(27,94,32,0.9))", color: "white", display: "grid", gap: 16 }}>
+      <div className={`panel auth-panel ${variant === "admin" ? "auth-panel--admin" : ""}`}>
+        <div className="auth-hero">
           <span className="pill" style={{ width: "fit-content", background: "rgba(255,255,255,0.12)", color: "white" }}>Secure access</span>
           <h1 className="section-title" style={{ margin: 0, fontSize: "clamp(2rem, 3.2vw, 3rem)" }}>{title}</h1>
           <p style={{ margin: 0, color: "rgba(255,255,255,0.84)", lineHeight: 1.7 }}>
-            Sign in to save your cart, view your orders, and keep your delivery details ready for a faster checkout.
+            {variant === "admin"
+              ? "Sign in to manage products, orders, payments, and store settings from the private dashboard."
+              : "Sign in to save your cart, view your orders, and keep your delivery details ready for a faster checkout."}
           </p>
-          <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+          <div className="grid auth-hero-grid">
             {[
               role === "admin" ? "Catalog control" : "Order tracking",
               role === "admin" ? "Stock updates" : "Saved profile",
@@ -100,7 +104,7 @@ export function AuthForm({
             ))}
           </div>
         </div>
-        <form className="card" onSubmit={handleSubmit} style={{ width: "100%", padding: 28, display: "grid", gap: 16, borderRadius: 0, boxShadow: "none", border: "none" }}>
+        <form className="card auth-form" onSubmit={handleSubmit}>
         <h1 style={{ margin: 0 }}>{title}</h1>
         {mode === "register" ? <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} /> : null}
         <input required type="email" name="email" placeholder="Email" style={fieldStyle} />
