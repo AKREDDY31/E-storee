@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Menu, ShoppingCart, User2 } from "lucide-react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -14,47 +15,83 @@ export function SiteHeader({
   const { count } = useCart();
   const { session } = useAuth();
   const homeHref = session?.role === "user" ? "/shop" : session?.role === "admin" ? "/admin/dashboard" : "/";
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  const navigationItems = [
+    { href: "/shop", label: "Shop" },
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
+    { href: "/track-order", label: "Track Order" },
+    session?.role === "user" ? { href: "/account/orders", label: "My Orders" } : null,
+    session?.role === "admin" ? { href: "/admin/dashboard", label: "Dashboard" } : null
+  ].filter(Boolean) as Array<{ href: string; label: string }>;
 
   return (
-    <header style={{ position: "sticky", top: 0, zIndex: 30, backdropFilter: "blur(18px)", background: "rgba(252, 251, 248, 0.88)", borderBottom: "1px solid rgba(221, 211, 196, 0.7)" }}>
-      <div className="container" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 0", gap: 16 }}>
-        <Link href={homeHref} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 16, background: "linear-gradient(135deg, var(--accent), #f1c14f)", display: "grid", placeItems: "center", color: "#543c00", fontWeight: 900 }}>V</div>
+    <header className="site-header">
+      <div className="container header-inner">
+        <Link href={homeHref} className="brand-link" onClick={closeMenu}>
+          <div style={{ width: 44, height: 44, borderRadius: 16, background: "linear-gradient(135deg, var(--accent), #f1c14f)", display: "grid", placeItems: "center", color: "#543c00", fontWeight: 900 }}>V</div>
           <div>
-            <div style={{ fontWeight: 900 }}>{brandName}</div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>Natural Living Store</div>
+            <div className="brand-name">{brandName}</div>
+            <div className="brand-subtitle">Natural Living Store</div>
           </div>
         </Link>
 
-        <nav className="hidden-mobile" style={{ display: "flex", gap: 18, color: "var(--muted)", alignItems: "center" }}>
-          <Link href="/shop">Shop</Link>
-          <Link href="/about">About</Link>
-          <Link href="/contact">Contact</Link>
-          <Link href="/track-order">Track Order</Link>
-          {session?.role === "user" ? <Link href="/account/orders">My Orders</Link> : null}
-          {session?.role === "admin" ? <Link href="/admin/dashboard">Dashboard</Link> : null}
+        <nav className="desktop-nav">
+          {navigationItems.map((item) => (
+            <Link key={item.href} href={item.href}>{item.label}</Link>
+          ))}
         </nav>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {session?.subscriptionStatus === "verified" ? <span className="pill hidden-mobile">Subscriber</span> : session?.subscriptionStatus === "pending" ? <span className="pill hidden-mobile">Pending</span> : null}
+        <div className="header-actions">
+          {session?.subscriptionStatus === "verified" ? <span className="pill desktop-chip">Subscriber</span> : session?.subscriptionStatus === "pending" ? <span className="pill desktop-chip">Pending</span> : null}
           {session?.role === "user" ? (
-            <Link href="/subscription" className="button secondary" style={{ height: 42, padding: "0 14px", borderRadius: 14 }}>
+            <Link href="/subscription" className="button secondary header-action-button">
               Subscribe
             </Link>
           ) : null}
-          <Link href={session ? "/account" : "/"} aria-label="User account" style={{ width: 42, height: 42, borderRadius: 14, border: "1px solid var(--border)", display: "grid", placeItems: "center", background: "white" }}>
+          <Link href={session ? "/account" : "/"} aria-label="User account" className="icon-button">
             <User2 size={18} />
           </Link>
           {session ? <LogoutButton label="Logout" redirectTo={session.role === "admin" ? "/admin/login" : "/"} /> : null}
-          <Link href="/cart" aria-label="Cart" style={{ width: 42, height: 42, borderRadius: 14, border: "1px solid var(--border)", display: "grid", placeItems: "center", background: "white", position: "relative" }}>
+          <Link href="/cart" aria-label="Cart" className="icon-button icon-button--cart">
             <ShoppingCart size={18} />
             {count > 0 ? (
-              <span style={{ position: "absolute", top: -4, right: -4, width: 22, height: 22, borderRadius: 999, background: "var(--brand)", color: "white", fontSize: 12, display: "grid", placeItems: "center", fontWeight: 800 }}>{count}</span>
+              <span className="cart-count">{count}</span>
             ) : null}
           </Link>
-          <button type="button" aria-label="Menu" className="hidden-mobile" style={{ display: "none" }}>
+          <button
+            type="button"
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((value) => !value)}
+            className="mobile-menu-button"
+          >
             <Menu />
           </button>
+        </div>
+      </div>
+
+      <div className={`mobile-drawer ${menuOpen ? "open" : ""}`}>
+        <div className="container mobile-drawer-inner">
+          <div className="mobile-drawer-links">
+            {navigationItems.map((item) => (
+              <Link key={item.href} href={item.href} onClick={closeMenu} className="mobile-drawer-link">
+                {item.label}
+              </Link>
+            ))}
+          </div>
+          <div className="mobile-drawer-actions">
+            {session?.subscriptionStatus === "verified" ? <span className="pill">Subscriber</span> : session?.subscriptionStatus === "pending" ? <span className="pill">Pending</span> : null}
+            {session?.role === "user" ? (
+              <Link href="/subscription" className="button secondary" onClick={closeMenu}>
+                Subscribe
+              </Link>
+            ) : null}
+            {session ? <LogoutButton label="Logout" redirectTo={session.role === "admin" ? "/admin/login" : "/"} /> : null}
+          </div>
         </div>
       </div>
     </header>
