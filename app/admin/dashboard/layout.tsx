@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { LogoutButton } from "@/components/shared/logout-button";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardLayout({
   children
 }: {
