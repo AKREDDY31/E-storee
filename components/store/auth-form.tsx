@@ -9,12 +9,14 @@ export function AuthForm({
   mode,
   role,
   title,
-  variant = "default"
+  variant = "default",
+  redirectPath
 }: {
   mode: "login" | "register";
   role: "user" | "admin";
   title: string;
   variant?: "default" | "admin";
+  redirectPath?: string;
 }) {
   const router = useRouter();
   const { setSession } = useAuth();
@@ -73,7 +75,7 @@ export function AuthForm({
       }
 
       setSession((data?.user as any) ?? null);
-      router.push(role === "admin" ? "/admin/dashboard" : "/shop");
+      router.push(redirectPath || (role === "admin" ? "/admin/dashboard" : "/shop"));
     } catch {
       setError("Unable to reach server. Please try again.");
     } finally {
