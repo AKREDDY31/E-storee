@@ -17,8 +17,7 @@ export default function AboutPage() {
           {[
             "Clear pricing and discounts",
             "Mobile-friendly shopping",
-            "COD and online payments",
-            "Admin-controlled catalog updates"
+            "COD and online payments"
           ].map((item) => (
             <div key={item} className="panel surface-soft" style={{ padding: 16, borderRadius: 18 }}>
               {item}

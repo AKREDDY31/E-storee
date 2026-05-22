@@ -56,15 +56,17 @@ export function TrackOrderClient() {
     settings?.upiId && result
       ? `upi://pay?${new URLSearchParams({
           pa: settings.upiId,
-          pn: settings.brandName || "Vedics.online",
+          pn: "Vedics.online",
           am: String(result.total || 0),
           cu: "INR",
           tn: `Order ${result.orderNumber}`
         }).toString()}`
       : "";
-  const qrUrl = upiLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
-    : settings?.qrImageUrl || "";
+  const qrUrl = settings?.qrImageUrl
+    ? settings.qrImageUrl
+    : upiLink
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
+      : "";
 
   async function savePaymentReference() {
     if (!result?._id) return;
@@ -137,8 +139,6 @@ export function TrackOrderClient() {
                         alt="UPI payment QR"
                         style={{ width: 240, maxWidth: "100%", borderRadius: 18, border: "1px solid var(--border)", background: "#fff" }}
                       />
-                      <div style={{ color: "var(--muted)", fontWeight: 700 }}>Payee: Cheepati Lokanatha Reddy</div>
-                      <div style={{ color: "var(--muted)", fontWeight: 700 }}>UPI ID: {settings.upiId || "Not configured"}</div>
                       <div style={{ color: "var(--muted)", fontWeight: 700 }}>Store: {settings.brandName || "Vedics.online"}</div>
                     </div>
                   ) : null}

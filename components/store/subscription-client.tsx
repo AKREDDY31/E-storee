@@ -16,13 +16,14 @@ const fieldStyle: CSSProperties = {
 
 function buildSubscriptionUpiLink(settings: StoreSettings, amount: number) {
   if (!settings.upiId) return "";
+  const payeeName = "Vedics.online";
 
   const params = new URLSearchParams({
     pa: settings.upiId,
-    pn: settings.brandName,
+    pn: payeeName,
     am: amount.toFixed(2),
     cu: "INR",
-    tn: `Subscription payment for ${settings.brandName}`
+    tn: `Subscription payment for ${payeeName}`
   });
 
   return `upi://pay?${params.toString()}`;
@@ -39,9 +40,11 @@ export function SubscriptionClient({ settings, amount = 500 }: { settings: Store
 
   const normalizedPhone = useMemo(() => normalizePhoneNumber(subscriptionPhone), [subscriptionPhone]);
   const upiLink = buildSubscriptionUpiLink(settings, amount);
-  const qrUrl = upiLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
-    : settings.qrImageUrl;
+  const qrUrl = settings.qrImageUrl
+    ? settings.qrImageUrl
+    : upiLink
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
+      : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -108,8 +111,6 @@ export function SubscriptionClient({ settings, amount = 500 }: { settings: Store
           {qrUrl ? (
             <div style={{ display: "grid", gap: 10 }}>
               <img src={qrUrl} alt="Subscription UPI QR" style={{ width: 240, maxWidth: "100%", borderRadius: 18, border: "1px solid var(--border)" }} />
-              <div style={{ color: "var(--muted)", fontWeight: 700 }}>Payee: Cheepati Lokanatha Reddy</div>
-              <div style={{ color: "var(--muted)", fontWeight: 700 }}>UPI ID: {settings.upiId || "Not configured"}</div>
               <div style={{ color: "var(--muted)", fontWeight: 700 }}>Store: {settings.brandName}</div>
             </div>
           ) : (

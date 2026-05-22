@@ -17,13 +17,14 @@ const formStyle: CSSProperties = {
 
 function buildUpiPaymentLink(settings: StoreSettings, amount: number) {
   if (!settings.upiId) return "";
+  const payeeName = "Vedics.online";
 
   const params = new URLSearchParams({
     pa: settings.upiId,
-    pn: settings.brandName,
+    pn: payeeName,
     am: amount.toFixed(2),
     cu: "INR",
-    tn: `Checkout payment for ${settings.brandName}`
+    tn: `Checkout payment for ${payeeName}`
   });
 
   return `upi://pay?${params.toString()}`;
@@ -57,9 +58,11 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
     : 0;
   const grandTotal = Math.max(0, baseTotal - subscriptionDiscount);
   const upiPaymentLink = buildUpiPaymentLink(settings, grandTotal);
-  const upiQrImageUrl = upiPaymentLink
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiPaymentLink)}`
-    : settings.qrImageUrl;
+  const upiQrImageUrl = settings.qrImageUrl
+    ? settings.qrImageUrl
+    : upiPaymentLink
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiPaymentLink)}`
+      : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -214,6 +217,33 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
             <input name="landmark" placeholder="Landmark" style={formStyle} />
           </div>
 
+          <div className="card" style={{ padding: 18, background: "var(--surface-alt)", display: "grid", gap: 12 }}>
+            <strong>Subscription benefit</strong>
+            <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input type="radio" checked={subscriptionChoice === "no"} onChange={() => setSubscriptionChoice("no")} />
+              I do not have a subscription
+            </label>
+            <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input type="radio" checked={subscriptionChoice === "yes"} onChange={() => setSubscriptionChoice("yes")} />
+              I have a subscription
+            </label>
+            {subscriptionChoice === "yes" ? (
+              <div style={{ display: "grid", gap: 10 }}>
+                <input
+                  value={subscriptionPhone}
+                  onChange={(event) => setSubscriptionPhone(event.target.value)}
+                  placeholder="Registered subscription phone number"
+                  style={formStyle}
+                />
+                <div style={{ color: hasMatchingSubscription ? "var(--success)" : "var(--muted)", fontSize: 13 }}>
+                  {hasMatchingSubscription
+                    ? `Subscription matched. ${settings.subscriptionDiscountPercent}% discount applied.`
+                    : "Enter the phone number used for your active subscription to unlock the discount."}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           <div className="card" style={{ padding: 18, display: "grid", gap: 12, background: "var(--surface-alt)" }}>
             <strong>Payment method</strong>
             <label style={{ display: "flex", gap: 10 }}>
@@ -239,33 +269,6 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
 
             {paymentMethod === "ONLINE" ? (
               <div style={{ display: "grid", gap: 14 }}>
-                <div className="card" style={{ padding: 18, background: "white", display: "grid", gap: 12, borderRadius: 22 }}>
-                  <strong>Subscription benefit</strong>
-                  <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <input type="radio" checked={subscriptionChoice === "no"} onChange={() => setSubscriptionChoice("no")} />
-                    I do not have a subscription
-                  </label>
-                  <label style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <input type="radio" checked={subscriptionChoice === "yes"} onChange={() => setSubscriptionChoice("yes")} />
-                    I have a subscription
-                  </label>
-                  {subscriptionChoice === "yes" ? (
-                    <div style={{ display: "grid", gap: 10 }}>
-                      <input
-                        value={subscriptionPhone}
-                        onChange={(event) => setSubscriptionPhone(event.target.value)}
-                        placeholder="Registered subscription phone number"
-                        style={formStyle}
-                      />
-                      <div style={{ color: hasMatchingSubscription ? "var(--success)" : "var(--muted)", fontSize: 13 }}>
-                        {hasMatchingSubscription
-                          ? `Subscription matched. ${settings.subscriptionDiscountPercent}% discount applied.`
-                          : "Enter the phone number used for your active subscription to unlock the discount."}
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-
                 <div className="card" style={{ padding: 18, background: "white", display: "grid", gap: 10, borderRadius: 22 }}>
                   <strong>Pay the fixed amount</strong>
                   <span style={{ color: "var(--muted)", fontWeight: 700 }}>Payable amount: {formatCurrency(grandTotal)}</span>
@@ -276,8 +279,6 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
                         alt="UPI payment QR"
                         style={{ width: 240, maxWidth: "100%", borderRadius: 18, border: "1px solid var(--border)", background: "#fff" }}
                       />
-                      <div style={{ color: "var(--muted)", fontWeight: 700 }}>Payee: Cheepati Lokanatha Reddy</div>
-                      <div style={{ color: "var(--muted)", fontWeight: 700 }}>UPI ID: {settings.upiId || "Not configured"}</div>
                       <div style={{ color: "var(--muted)", fontWeight: 700 }}>Store: {settings.brandName}</div>
                     </div>
                   ) : (

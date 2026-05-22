@@ -20,6 +20,17 @@ export function normalizePhoneNumber(value: string) {
   return digits.length > 10 ? digits.slice(-10) : digits;
 }
 
+export function normalizeWhatsAppNumber(value: string) {
+  let digits = value.replace(/\D/g, "");
+  digits = digits.replace(/^0+/, "");
+
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+
+  return digits;
+}
+
 export function formatAddressLine(address?: {
   fullName?: string | null;
   phone?: string | null;
@@ -154,5 +165,5 @@ export function buildWhatsAppOrderLink(
   ].filter(Boolean);
 
   const message = encodeURIComponent(messageLines.join("\n"));
-  return `https://wa.me/${normalizePhoneNumber(whatsappNumber)}?text=${message}`;
+  return `https://wa.me/${normalizeWhatsAppNumber(whatsappNumber)}?text=${message}`;
 }

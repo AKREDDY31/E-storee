@@ -415,6 +415,44 @@ img {
   display: block;
 }
 
+.offer-banner-shell {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(221, 211, 196, 0.8);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 244, 238, 0.96));
+  box-shadow: var(--shadow);
+}
+
+.offer-banner-track {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  width: max-content;
+  padding: 14px;
+  animation: offer-scroll 44s linear infinite;
+}
+
+.offer-banner-shell:hover .offer-banner-track {
+  animation-play-state: paused;
+}
+
+.offer-banner-item {
+  width: min(260px, calc(100vw - 92px));
+  border: 1px solid rgba(13, 79, 60, 0.16);
+  border-radius: 18px;
+  background: white;
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.offer-banner-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(13, 79, 60, 0.12);
+}
+
 @media (max-width: 900px) {
   .section {
     padding: 42px 0;
@@ -487,6 +525,10 @@ img {
   .subtitle {
     font-size: 0.98rem;
   }
+
+  .offer-banner-track {
+    animation-duration: 34s;
+  }
 }
 
 @keyframes ticker {
@@ -495,5 +537,14 @@ img {
   }
   100% {
     transform: translateX(-100%);
+  }
+}
+
+@keyframes offer-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
   }
 }
