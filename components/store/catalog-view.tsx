@@ -5,6 +5,7 @@ import { ProductCard } from "@/components/store/product-card";
 import { CATEGORY_ORDER } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
+import { OfferBanner } from "@/components/store/offer-banner";
 
 export function CatalogView({
   products,
@@ -40,6 +41,7 @@ export function CatalogView({
 
   return (
     <div className="container section" style={{ display: "grid", gap: 28 }}>
+      <OfferBanner products={products} />
       <div className="card" style={{ padding: 28, display: "grid", gap: 20, background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,238,0.94))" }}>
         <div style={{ display: "grid", gap: 10 }}>
           <span className="eyebrow">Filters</span>

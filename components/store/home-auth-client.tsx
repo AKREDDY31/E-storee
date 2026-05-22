@@ -7,6 +7,7 @@ import { ShieldCheck, Truck, UserRound } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { formatCurrency } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
+import { OfferBanner } from "@/components/store/offer-banner";
 
 type Mode = "login" | "register";
 
@@ -16,20 +17,6 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const offerItems = [...products]
-    .sort((a, b) => (b.mrp || b.price) - (a.mrp || a.price))
-    .filter((p) => (p.mrp || p.price) > 200) // high-priced threshold, adjust as needed
-    .slice(0, 12)
-    .map((product) => {
-      const basePrice = Math.max(product.mrp || 0, product.price || 0);
-      const offerPrice = Math.max(1, Math.round(basePrice * 0.7));
-      return {
-        ...product,
-        basePrice,
-        offerPrice
-      };
-    });
-  const scrollingOfferItems = offerItems.length > 0 ? [...offerItems, ...offerItems] : [];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,27 +77,7 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
             </Link>
           </div>
 
-          <div className="offer-banner-shell">
-            <div className="offer-banner-track">
-              {scrollingOfferItems.map((item, index) => (
-                <Link key={`${item.slug}-${index}`} href={`/shop/${item.slug}`} className="offer-banner-item">
-                  <span className="pill" style={{ width: "fit-content" }}>30% OFF</span>
-                  <strong style={{ fontSize: 16, lineHeight: 1.35 }}>{item.name}</strong>
-                  <span style={{ color: "var(--muted)", fontSize: 13 }}>{item.category}</span>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700 }}>Actual</span>
-                    <span style={{ color: "var(--muted)", textDecoration: "line-through", fontWeight: 700 }}>
-                      {formatCurrency(item.basePrice)}
-                    </span>
-                    <span style={{ color: "var(--muted)", fontSize: 12, fontWeight: 700 }}>Offer</span>
-                    <strong style={{ fontSize: 20, color: "var(--brand-deep)" }}>
-                      {formatCurrency(item.offerPrice)}
-                    </strong>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <OfferBanner products={products} />
         </div>
       </section>
 
