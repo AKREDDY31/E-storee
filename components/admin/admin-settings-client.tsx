@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, type CSSProperties, type ChangeEvent, type FormEvent } from "react";
 import { type StoreSettings } from "@/types";
 
@@ -14,8 +13,40 @@ export function AdminSettingsClient({
   const [error, setError] = useState("");
   const [uploadingQr, setUploadingQr] = useState(false);
   const [qrStatus, setQrStatus] = useState("");
+  const [qrPreview, setQrPreview] = useState(initialSettings.qrImageUrl);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [logoStatus, setLogoStatus] = useState("");
+  const [logoPreview, setLogoPreview] = useState(initialSettings.siteLogoUrl);
+
+  async function compressImage(file: File) {
+    if (file.type === "image/webp" && file.size <= 1024 * 1024) {
+      return file;
+    }
+
+    const bitmap = await createImageBitmap(file);
+    const maxSize = 1280;
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return file;
+    }
+
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    if (!blob) {
+      return file;
+    }
+
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
+  }
 
   async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -23,8 +54,9 @@ export function AdminSettingsClient({
 
     setUploadingLogo(true);
     setLogoStatus("");
+    setLogoPreview(URL.createObjectURL(file));
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", await compressImage(file));
 
     const response = await fetch("/api/upload", {
       method: "POST",
@@ -57,8 +89,9 @@ export function AdminSettingsClient({
 
     setUploadingQr(true);
     setQrStatus("");
+    setQrPreview(URL.createObjectURL(file));
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", await compressImage(file));
 
     const response = await fetch("/api/upload", {
       method: "POST",
@@ -154,15 +187,10 @@ export function AdminSettingsClient({
           {logoStatus ? (
             <span style={{ color: logoStatus.includes("successfully") ? "var(--success)" : "var(--danger)" }}>{logoStatus}</span>
           ) : null}
-          {settings.siteLogoUrl ? (
+          {logoPreview ? (
             <div style={{ width: 180, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
-              <Image
-                src={settings.siteLogoUrl}
-                alt="Current site logo"
-                width={180}
-                height={180}
-                style={{ width: "100%", height: "auto", objectFit: "cover" }}
-              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={logoPreview} alt="Current site logo" style={{ width: "100%", height: "auto", objectFit: "cover", display: "block" }} />
             </div>
           ) : (
             <span style={{ color: "var(--muted)" }}>No site logo uploaded yet.</span>
@@ -177,15 +205,10 @@ export function AdminSettingsClient({
               {qrStatus}
             </span>
           ) : null}
-          {settings.qrImageUrl ? (
+          {qrPreview ? (
             <div style={{ width: 180, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
-              <Image
-                src={settings.qrImageUrl}
-                alt="Current payment QR"
-                width={180}
-                height={220}
-                style={{ width: "100%", height: "auto", objectFit: "cover" }}
-              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrPreview} alt="Current payment QR" style={{ width: "100%", height: "auto", objectFit: "cover", display: "block" }} />
             </div>
           ) : (
             <span style={{ color: "var(--muted)" }}>No QR uploaded yet.</span>
