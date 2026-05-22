@@ -18,7 +18,8 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
   const [loading, setLoading] = useState(false);
   const offerItems = [...products]
     .sort((a, b) => (b.mrp || b.price) - (a.mrp || a.price))
-    .slice(0, 10)
+    .filter((p) => (p.mrp || p.price) > 200) // high-priced threshold, adjust as needed
+    .slice(0, 12)
     .map((product) => {
       const basePrice = Math.max(product.mrp || 0, product.price || 0);
       const offerPrice = Math.max(1, Math.round(basePrice * 0.7));

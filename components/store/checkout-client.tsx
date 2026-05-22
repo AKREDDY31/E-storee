@@ -58,11 +58,9 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
     : 0;
   const grandTotal = Math.max(0, baseTotal - subscriptionDiscount);
   const upiPaymentLink = buildUpiPaymentLink(settings, grandTotal);
-  const upiQrImageUrl = settings.qrImageUrl
-    ? settings.qrImageUrl
-    : upiPaymentLink
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiPaymentLink)}`
-      : "";
+  const upiQrImageUrl = upiPaymentLink
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiPaymentLink)}`
+    : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -282,7 +280,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
                       <div style={{ color: "var(--muted)", fontWeight: 700 }}>Store: {settings.brandName}</div>
                     </div>
                   ) : (
-                    <span style={{ color: "var(--muted)" }}>Payment QR will appear here when the admin uploads it.</span>
+                    <span style={{ color: "var(--muted)" }}>Configure a UPI ID in admin to show QR.</span>
                   )}
                   <div style={{ display: "grid", gap: 10, marginTop: 6 }}>
                     <button
@@ -352,8 +350,13 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
               <strong>-{formatCurrency(subscriptionDiscount)}</strong>
             </div>
           ) : null}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20 }}>
-            <span>Total payable</span>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 20, alignItems: 'center' }}>
+            <div>
+              <div>Total payable</div>
+              {subscriptionDiscount > 0 ? (
+                <div style={{ color: "var(--success)", fontSize: 13 }}>Subscription discount applied ({settings.subscriptionDiscountPercent}%): -{formatCurrency(subscriptionDiscount)}</div>
+              ) : null}
+            </div>
             <strong>{formatCurrency(grandTotal)}</strong>
           </div>
           <div style={{ color: "var(--muted)", lineHeight: 1.6 }}>

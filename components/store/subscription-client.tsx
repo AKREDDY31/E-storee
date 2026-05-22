@@ -40,11 +40,9 @@ export function SubscriptionClient({ settings, amount = 500 }: { settings: Store
 
   const normalizedPhone = useMemo(() => normalizePhoneNumber(subscriptionPhone), [subscriptionPhone]);
   const upiLink = buildSubscriptionUpiLink(settings, amount);
-  const qrUrl = settings.qrImageUrl
-    ? settings.qrImageUrl
-    : upiLink
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
-      : "";
+  const qrUrl = upiLink
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
+    : "";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,7 +112,7 @@ export function SubscriptionClient({ settings, amount = 500 }: { settings: Store
               <div style={{ color: "var(--muted)", fontWeight: 700 }}>Store: {settings.brandName}</div>
             </div>
           ) : (
-            <div style={{ color: "var(--muted)" }}>No subscription QR configured yet.</div>
+            <div style={{ color: "var(--muted)" }}>Configure a UPI ID in admin to enable subscription payment.</div>
           )}
           <button
             type="button"

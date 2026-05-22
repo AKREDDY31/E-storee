@@ -548,3 +548,8 @@ img {
     transform: translateX(-50%);
   }
 }
+
+/* Make sure duplicated items are handled, and container hides overflow */
+.offer-banner-shell {
+  overflow: hidden;
+}

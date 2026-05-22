@@ -62,11 +62,9 @@ export function TrackOrderClient() {
           tn: `Order ${result.orderNumber}`
         }).toString()}`
       : "";
-  const qrUrl = settings?.qrImageUrl
-    ? settings.qrImageUrl
-    : upiLink
-      ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
-      : "";
+  const qrUrl = upiLink
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiLink)}`
+    : "";
 
   async function savePaymentReference() {
     if (!result?._id) return;
