@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -26,24 +26,23 @@ export function AdminImageUploadField({
   helpText,
   previewAlt
 }: AdminImageUploadFieldProps) {
-  const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState("");
   const [previewUrl, setPreviewUrl] = useState(value);
-  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     setPreviewUrl(value);
   }, [value]);
 
-  useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-      }
-    };
-  }, []);
+  function readAsDataUrl(blob: Blob) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Unable to read image"));
+      reader.readAsDataURL(blob);
+    });
+  }
 
-  async function uploadFile(file: File) {
+  async function prepareImage(file: File) {
     if (!ACCEPTED_TYPES.has(file.type)) {
       setStatus("Use JPG, JPEG, PNG, or WEBP files only.");
       return;
@@ -54,63 +53,37 @@ export function AdminImageUploadField({
       return;
     }
 
-    setUploading(true);
-    setStatus("");
-
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-    }
-
-    const objectUrl = URL.createObjectURL(file);
-    objectUrlRef.current = objectUrl;
-    setPreviewUrl(objectUrl);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
-      const uploadedUrl = await new Promise<string>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/upload");
-        xhr.withCredentials = true;
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            setStatus(`Uploading ${Math.round((event.loaded / event.total) * 100)}%`);
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText) as { url?: string };
-              if (typeof data.url === "string" && data.url.length > 0) {
-                resolve(data.url);
-                return;
-              }
-              reject(new Error("Invalid upload response"));
-            } catch (error) {
-              reject(error);
-            }
-            return;
-          }
+      setStatus("Preparing image...");
 
-          try {
-            const data = JSON.parse(xhr.responseText) as { error?: string };
-            reject(new Error(data.error || "Upload failed"));
-          } catch (error) {
-            reject(new Error("Upload failed"));
-          }
-        };
-        xhr.onerror = () => reject(new Error("Network error during upload"));
-        xhr.send(formData);
-      });
+      const bitmap = await createImageBitmap(file);
+      const maxSize = 1200;
+      const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
 
-      onValueChange(uploadedUrl);
-      setPreviewUrl(uploadedUrl);
-      setStatus("Upload complete.");
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        const fallbackDataUrl = await readAsDataUrl(file);
+        onValueChange(fallbackDataUrl);
+        setPreviewUrl(fallbackDataUrl);
+        setStatus("Image ready. Save to publish it.");
+        return;
+      }
+
+      context.drawImage(bitmap, 0, 0, width, height);
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+      const dataUrl = blob ? await readAsDataUrl(blob) : await readAsDataUrl(file);
+      onValueChange(dataUrl);
+      setPreviewUrl(dataUrl);
+      setStatus("Image ready. Save to publish it.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Upload failed");
-    } finally {
-      setUploading(false);
     }
   }
 
@@ -140,7 +113,7 @@ export function AdminImageUploadField({
           event.preventDefault();
           const file = event.dataTransfer.files?.[0];
           if (file) {
-            void uploadFile(file);
+            void prepareImage(file);
           }
         }}
       >
@@ -152,16 +125,14 @@ export function AdminImageUploadField({
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-            disabled={uploading}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) {
-                void uploadFile(file);
+                void prepareImage(file);
               }
               event.currentTarget.value = "";
             }}
           />
-          {uploading ? <span style={{ color: "var(--muted)" }}>Uploading...</span> : null}
         </div>
       </div>
 
@@ -172,7 +143,7 @@ export function AdminImageUploadField({
         </div>
       ) : null}
 
-      {status ? <span style={{ color: status.toLowerCase().includes("upload") ? "var(--muted)" : "var(--danger)", fontSize: 13 }}>{status}</span> : null}
+      {status ? <span style={{ color: status.toLowerCase().includes("ready") || status.toLowerCase().includes("preparing") ? "var(--muted)" : "var(--danger)", fontSize: 13 }}>{status}</span> : null}
     </div>
   );
 }
