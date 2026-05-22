@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type CSSProperties, type ChangeEvent, type FormEvent } from "react";
+import { useState, type CSSProperties, type FormEvent } from "react";
+import { AdminImageUploadField } from "./admin-image-upload-field";
 import { type StoreSettings } from "@/types";
 
 export function AdminSettingsClient({
@@ -13,153 +14,8 @@ export function AdminSettingsClient({
   const [error, setError] = useState("");
   const [uploadingQr, setUploadingQr] = useState(false);
   const [qrStatus, setQrStatus] = useState("");
-  const [qrPreview, setQrPreview] = useState(initialSettings.qrImageUrl);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [logoStatus, setLogoStatus] = useState("");
-  const [logoPreview, setLogoPreview] = useState(initialSettings.siteLogoUrl);
-
-  async function compressImage(file: File) {
-    if (file.type === "image/webp" && file.size <= 1024 * 1024) {
-      return file;
-    }
-    const bitmap = await createImageBitmap(file);
-    const maxSize = 1024;
-    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      return file;
-    }
-
-    context.drawImage(bitmap, 0, 0, width, height);
-
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.72));
-    if (!blob) {
-      return file;
-    }
-
-    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
-  }
-
-  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadingLogo(true);
-    setLogoStatus("");
-    try {
-      const compressed = await compressImage(file);
-      setLogoPreview(URL.createObjectURL(compressed));
-
-      const formData = new FormData();
-      formData.append("file", compressed);
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/upload");
-        xhr.withCredentials = true;
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setLogoStatus(`${Math.round((e.loaded / e.total) * 100)}% uploaded`);
-        };
-        xhr.onload = () => {
-          setUploadingLogo(false);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              const logoField = document.getElementById("admin-site-logo-url") as HTMLInputElement | null;
-              if (logoField) logoField.value = data.url;
-              setSettings((current) => ({ ...current, siteLogoUrl: data.url }));
-              setLogoStatus("Logo uploaded successfully. Save settings to publish it.");
-              resolve();
-            } catch (err) {
-              setLogoStatus("Upload succeeded but response invalid");
-              resolve();
-            }
-          } else {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              setLogoStatus(data.error || "Logo upload failed");
-            } catch (err) {
-              setLogoStatus("Logo upload failed");
-            }
-            reject(new Error("Upload failed"));
-          }
-        };
-        xhr.onerror = () => {
-          setUploadingLogo(false);
-          setLogoStatus("Network error during upload");
-          reject(new Error("Network error"));
-        };
-        xhr.send(formData);
-      });
-    } catch (err) {
-      setUploadingLogo(false);
-      setLogoStatus((err as Error)?.message || "Logo upload failed");
-    }
-  }
-
-  async function handleQrUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadingQr(true);
-    setQrStatus("");
-    try {
-      const compressed = await compressImage(file);
-      setQrPreview(URL.createObjectURL(compressed));
-
-      const formData = new FormData();
-      formData.append("file", compressed);
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/upload");
-        xhr.withCredentials = true;
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setQrStatus(`${Math.round((e.loaded / e.total) * 100)}% uploaded`);
-        };
-        xhr.onload = () => {
-          setUploadingQr(false);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              const qrField = document.getElementById("admin-qr-image-url") as HTMLInputElement | null;
-              if (qrField) qrField.value = data.url;
-              setSettings((current) => ({ ...current, qrImageUrl: data.url }));
-              setQrStatus("QR uploaded successfully. Save settings to publish it.");
-              resolve();
-            } catch (err) {
-              setQrStatus("Upload succeeded but response invalid");
-              resolve();
-            }
-          } else {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              setQrStatus(data.error || "QR upload failed");
-            } catch (err) {
-              setQrStatus("QR upload failed");
-            }
-            reject(new Error("Upload failed"));
-          }
-        };
-        xhr.onerror = () => {
-          setUploadingQr(false);
-          setQrStatus("Network error during upload");
-          reject(new Error("Network error"));
-        };
-        xhr.send(formData);
-      });
-    } catch (err) {
-      setUploadingQr(false);
-      setQrStatus((err as Error)?.message || "QR upload failed");
-    }
-  }
+  const [siteLogoUrl, setSiteLogoUrl] = useState(initialSettings.siteLogoUrl);
+  const [qrImageUrl, setQrImageUrl] = useState(initialSettings.qrImageUrl);
 
   async function handleSettingsSave(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -212,7 +68,19 @@ export function AdminSettingsClient({
       <form className="card" onSubmit={handleSettingsSave} style={{ padding: 24, display: "grid", gap: 12 }}>
         <strong>Business and payment details</strong>
         <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          <input id="admin-site-logo-url" defaultValue={settings.siteLogoUrl} name="siteLogoUrl" placeholder="Site logo image URL" style={fieldStyle} />
+          <AdminImageUploadField
+            id="admin-site-logo-url"
+            name="siteLogoUrl"
+            label="Site logo image URL"
+            value={siteLogoUrl}
+            onValueChange={(value) => {
+              setSiteLogoUrl(value);
+              setSettings((current) => ({ ...current, siteLogoUrl: value }));
+            }}
+            placeholder="Site logo image URL"
+            previewAlt="Current site logo"
+            helpText="Upload a logo instantly. JPG, JPEG, PNG, or WEBP are supported."
+          />
           <input defaultValue={settings.brandName} name="brandName" placeholder="Brand name" style={fieldStyle} />
           <input defaultValue={settings.tagline} name="tagline" placeholder="Tagline" style={fieldStyle} />
           <input defaultValue={settings.announcementText} name="announcementText" placeholder="Top scrolling website update" style={fieldStyle} />
@@ -220,42 +88,20 @@ export function AdminSettingsClient({
           <input defaultValue={settings.supportEmail} name="supportEmail" placeholder="Support email" style={fieldStyle} />
           <input defaultValue={settings.whatsappNumber} name="whatsappNumber" placeholder="WhatsApp number" style={fieldStyle} />
           <input defaultValue={settings.upiId} name="upiId" placeholder="UPI ID" style={fieldStyle} />
-          <input id="admin-qr-image-url" defaultValue={settings.qrImageUrl} name="qrImageUrl" placeholder="QR image URL" style={fieldStyle} />
+          <AdminImageUploadField
+            id="admin-qr-image-url"
+            name="qrImageUrl"
+            label="QR image URL"
+            value={qrImageUrl}
+            onValueChange={(value) => {
+              setQrImageUrl(value);
+              setSettings((current) => ({ ...current, qrImageUrl: value }));
+            }}
+            placeholder="QR image URL"
+            previewAlt="Current payment QR"
+            helpText="Upload the payment QR directly without any extra conversion step."
+          />
           <input defaultValue={settings.subscriptionDiscountPercent} name="subscriptionDiscountPercent" type="number" min="0" max="100" placeholder="Subscription discount %" style={fieldStyle} />
-        </div>
-        <div className="card" style={{ padding: 18, display: "grid", gap: 12, background: "var(--surface-alt)" }}>
-          <strong>Site logo</strong>
-          <input type="file" accept=".jpg,.jpeg,.png,.webp,.svg" onChange={handleLogoUpload} />
-          {uploadingLogo ? <span style={{ color: "var(--muted)" }}>Uploading site logo...</span> : null}
-          {logoStatus ? (
-            <span style={{ color: logoStatus.includes("successfully") ? "var(--success)" : "var(--danger)" }}>{logoStatus}</span>
-          ) : null}
-          {logoPreview ? (
-            <div style={{ width: 180, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={logoPreview} alt="Current site logo" style={{ width: "100%", height: "auto", objectFit: "cover", display: "block" }} />
-            </div>
-          ) : (
-            <span style={{ color: "var(--muted)" }}>No site logo uploaded yet.</span>
-          )}
-        </div>
-        <div className="card" style={{ padding: 18, display: "grid", gap: 12, background: "var(--surface-alt)" }}>
-          <strong>Payment QR</strong>
-          <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={handleQrUpload} />
-          {uploadingQr ? <span style={{ color: "var(--muted)" }}>Uploading payment QR...</span> : null}
-          {qrStatus ? (
-            <span style={{ color: qrStatus.includes("successfully") ? "var(--success)" : "var(--danger)" }}>
-              {qrStatus}
-            </span>
-          ) : null}
-          {qrPreview ? (
-            <div style={{ width: 180, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qrPreview} alt="Current payment QR" style={{ width: "100%", height: "auto", objectFit: "cover", display: "block" }} />
-            </div>
-          ) : (
-            <span style={{ color: "var(--muted)" }}>No QR uploaded yet.</span>
-          )}
         </div>
         <textarea defaultValue={settings.businessAddress} name="businessAddress" placeholder="Business address" style={{ ...fieldStyle, height: 96, paddingTop: 12 }} />
         <textarea defaultValue={settings.courierDetails} name="courierDetails" placeholder="Courier details" style={{ ...fieldStyle, height: 96, paddingTop: 12 }} />

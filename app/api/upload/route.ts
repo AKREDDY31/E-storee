@@ -4,7 +4,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth";
 
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export async function POST(request: Request) {
   const session = await getCurrentSession();
@@ -33,33 +33,13 @@ export async function POST(request: Request) {
   const uploadsDir = path.join(process.cwd(), "public", "uploads");
   await mkdir(uploadsDir, { recursive: true });
 
-  const originalExtension = path.extname(file.name) || "";
+  const originalExtension = path.extname(file.name) || ".jpg";
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  let outBuffer = buffer;
-  let extension = originalExtension || ".jpg";
-
-  if (file.type !== "image/svg+xml") {
-    try {
-      const sharpModule = await import("sharp");
-      const sharp = sharpModule.default || sharpModule;
-      outBuffer = await sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer();
-      extension = ".webp";
-    } catch (err) {
-      // If sharp isn't available or fails, fall back to original buffer
-      outBuffer = buffer;
-      extension = originalExtension || ".jpg";
-    }
-  } else {
-    // SVG: preserve original
-    outBuffer = buffer;
-    extension = originalExtension || ".svg";
-  }
-
-  const fileName = `${Date.now()}-${randomUUID()}${extension}`;
+  const fileName = `${Date.now()}-${randomUUID()}${originalExtension}`;
   const filePath = path.join(uploadsDir, fileName);
 
-  await writeFile(filePath, outBuffer);
+  await writeFile(filePath, buffer);
 
   return NextResponse.json({ url: `/uploads/${fileName}` });
 }

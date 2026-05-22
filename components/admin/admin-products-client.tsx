@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type CSSProperties, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_ORDER } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
+import { AdminImageUploadField } from "./admin-image-upload-field";
 import { type ProductCardData } from "@/types";
 
 export function AdminProductsClient({
@@ -14,99 +15,9 @@ export function AdminProductsClient({
   const router = useRouter();
   const [products, setProducts] = useState(initialProducts);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
   const [formMessage, setFormMessage] = useState("");
   const [editingCode, setEditingCode] = useState("");
-
-  async function compressImage(file: File) {
-    if (file.type === "image/webp" && file.size <= 1024 * 1024) {
-      return file;
-    }
-    const bitmap = await createImageBitmap(file);
-    const maxSize = 1024;
-    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-    const width = Math.max(1, Math.round(bitmap.width * scale));
-    const height = Math.max(1, Math.round(bitmap.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d");
-    if (!context) {
-      return file;
-    }
-
-    context.drawImage(bitmap, 0, 0, width, height);
-
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.72));
-    if (!blob) {
-      return file;
-    }
-
-    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
-  }
-
-  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setUploadMessage("");
-    try {
-      const compressed = await compressImage(file);
-      setImagePreview(URL.createObjectURL(compressed));
-
-      const formData = new FormData();
-      formData.append("file", compressed);
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/upload");
-        xhr.withCredentials = true;
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setUploadMessage(`${Math.round((e.loaded / e.total) * 100)}% uploaded`);
-          }
-        };
-        xhr.onload = () => {
-          setUploading(false);
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              const imageField = document.getElementById("admin-image-url") as HTMLInputElement | null;
-              if (imageField) {
-                imageField.value = data.url;
-              }
-              setUploadMessage("Image uploaded successfully.");
-              resolve();
-            } catch (err) {
-              setUploadMessage("Upload succeeded but response invalid");
-              resolve();
-            }
-          } else {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              setUploadMessage(data.error || "Upload failed");
-            } catch (err) {
-              setUploadMessage("Upload failed");
-            }
-            reject(new Error("Upload failed"));
-          }
-        };
-        xhr.onerror = () => {
-          setUploading(false);
-          setUploadMessage("Network error during upload");
-          reject(new Error("Network error"));
-        };
-        xhr.send(formData);
-      });
-    } catch (err) {
-      setUploading(false);
-      setUploadMessage((err as Error)?.message || "Upload failed");
-    }
-  }
+  const [imageUrl, setImageUrl] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,7 +98,7 @@ export function AdminProductsClient({
     setValue("benefits", product.benefits.join(", "));
     setValue("ingredients", product.ingredients?.join(", "));
     setValue("howToUse", product.howToUse?.join(", "));
-    setImagePreview(product.imageUrl || "");
+    setImageUrl(product.imageUrl || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -226,22 +137,16 @@ export function AdminProductsClient({
 
         <section style={sectionStyle}>
           <div style={sectionHeaderStyle}>Media</div>
-          <Field label="Product image URL"><input id="admin-image-url" name="imageUrl" placeholder="Paste an uploaded image path or a direct URL" style={fieldStyle} /></Field>
-          <div style={{ display: "grid", gap: 8 }}>
-          <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={handleImageUpload} />
-          {imagePreview ? (
-            <div style={{ width: 180, borderRadius: 18, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imagePreview} alt="Product preview" style={{ width: "100%", display: "block", objectFit: "cover" }} />
-            </div>
-          ) : null}
-          {uploading ? <span style={{ color: "var(--muted)" }}>Uploading image...</span> : null}
-          {uploadMessage ? (
-            <span style={{ color: uploadMessage.includes("success") ? "var(--success)" : "var(--danger)" }}>
-              {uploadMessage}
-            </span>
-          ) : null}
-        </div>
+          <AdminImageUploadField
+            id="admin-image-url"
+            name="imageUrl"
+            label="Product image URL"
+            value={imageUrl}
+            onValueChange={setImageUrl}
+            placeholder="Paste an uploaded image path or a direct URL"
+            previewAlt="Product preview"
+            helpText="Choose a product image and it uploads immediately without extra conversion."
+          />
         </section>
 
         <section style={sectionStyle}>
