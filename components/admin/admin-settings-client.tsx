@@ -22,9 +22,8 @@ export function AdminSettingsClient({
     if (file.type === "image/webp" && file.size <= 1024 * 1024) {
       return file;
     }
-
     const bitmap = await createImageBitmap(file);
-    const maxSize = 1280;
+    const maxSize = 1024;
     const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -40,7 +39,7 @@ export function AdminSettingsClient({
 
     context.drawImage(bitmap, 0, 0, width, height);
 
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.72));
     if (!blob) {
       return file;
     }
@@ -54,33 +53,55 @@ export function AdminSettingsClient({
 
     setUploadingLogo(true);
     setLogoStatus("");
-    setLogoPreview(URL.createObjectURL(file));
-    const formData = new FormData();
-    formData.append("file", await compressImage(file));
+    try {
+      const compressed = await compressImage(file);
+      setLogoPreview(URL.createObjectURL(compressed));
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-      credentials: "include"
-    });
-    const data = await response.json();
-    setUploadingLogo(false);
+      const formData = new FormData();
+      formData.append("file", compressed);
 
-    if (!response.ok) {
-      setLogoStatus(data.error || "Logo upload failed");
-      return;
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/upload");
+        xhr.withCredentials = true;
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setLogoStatus(`${Math.round((e.loaded / e.total) * 100)}% uploaded`);
+        };
+        xhr.onload = () => {
+          setUploadingLogo(false);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              const logoField = document.getElementById("admin-site-logo-url") as HTMLInputElement | null;
+              if (logoField) logoField.value = data.url;
+              setSettings((current) => ({ ...current, siteLogoUrl: data.url }));
+              setLogoStatus("Logo uploaded successfully. Save settings to publish it.");
+              resolve();
+            } catch (err) {
+              setLogoStatus("Upload succeeded but response invalid");
+              resolve();
+            }
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              setLogoStatus(data.error || "Logo upload failed");
+            } catch (err) {
+              setLogoStatus("Logo upload failed");
+            }
+            reject(new Error("Upload failed"));
+          }
+        };
+        xhr.onerror = () => {
+          setUploadingLogo(false);
+          setLogoStatus("Network error during upload");
+          reject(new Error("Network error"));
+        };
+        xhr.send(formData);
+      });
+    } catch (err) {
+      setUploadingLogo(false);
+      setLogoStatus((err as Error)?.message || "Logo upload failed");
     }
-
-    const logoField = document.getElementById("admin-site-logo-url") as HTMLInputElement | null;
-    if (logoField) {
-      logoField.value = data.url;
-    }
-
-    setSettings((current) => ({
-      ...current,
-      siteLogoUrl: data.url
-    }));
-    setLogoStatus("Logo uploaded successfully. Save settings to publish it.");
   }
 
   async function handleQrUpload(event: ChangeEvent<HTMLInputElement>) {
@@ -89,33 +110,55 @@ export function AdminSettingsClient({
 
     setUploadingQr(true);
     setQrStatus("");
-    setQrPreview(URL.createObjectURL(file));
-    const formData = new FormData();
-    formData.append("file", await compressImage(file));
+    try {
+      const compressed = await compressImage(file);
+      setQrPreview(URL.createObjectURL(compressed));
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-      credentials: "include"
-    });
-    const data = await response.json();
-    setUploadingQr(false);
+      const formData = new FormData();
+      formData.append("file", compressed);
 
-    if (!response.ok) {
-      setQrStatus(data.error || "QR upload failed");
-      return;
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/upload");
+        xhr.withCredentials = true;
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setQrStatus(`${Math.round((e.loaded / e.total) * 100)}% uploaded`);
+        };
+        xhr.onload = () => {
+          setUploadingQr(false);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              const qrField = document.getElementById("admin-qr-image-url") as HTMLInputElement | null;
+              if (qrField) qrField.value = data.url;
+              setSettings((current) => ({ ...current, qrImageUrl: data.url }));
+              setQrStatus("QR uploaded successfully. Save settings to publish it.");
+              resolve();
+            } catch (err) {
+              setQrStatus("Upload succeeded but response invalid");
+              resolve();
+            }
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              setQrStatus(data.error || "QR upload failed");
+            } catch (err) {
+              setQrStatus("QR upload failed");
+            }
+            reject(new Error("Upload failed"));
+          }
+        };
+        xhr.onerror = () => {
+          setUploadingQr(false);
+          setQrStatus("Network error during upload");
+          reject(new Error("Network error"));
+        };
+        xhr.send(formData);
+      });
+    } catch (err) {
+      setUploadingQr(false);
+      setQrStatus((err as Error)?.message || "QR upload failed");
     }
-
-    const qrField = document.getElementById("admin-qr-image-url") as HTMLInputElement | null;
-    if (qrField) {
-      qrField.value = data.url;
-    }
-
-    setSettings((current) => ({
-      ...current,
-      qrImageUrl: data.url
-    }));
-    setQrStatus("QR uploaded successfully. Save settings to publish it.");
   }
 
   async function handleSettingsSave(event: FormEvent<HTMLFormElement>) {

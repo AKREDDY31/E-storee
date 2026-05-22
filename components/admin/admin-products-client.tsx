@@ -24,9 +24,8 @@ export function AdminProductsClient({
     if (file.type === "image/webp" && file.size <= 1024 * 1024) {
       return file;
     }
-
     const bitmap = await createImageBitmap(file);
-    const maxSize = 1280;
+    const maxSize = 1024;
     const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -41,7 +40,7 @@ export function AdminProductsClient({
 
     context.drawImage(bitmap, 0, 0, width, height);
 
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.72));
     if (!blob) {
       return file;
     }
@@ -55,26 +54,57 @@ export function AdminProductsClient({
 
     setUploading(true);
     setUploadMessage("");
-    setImagePreview(URL.createObjectURL(file));
-    const formData = new FormData();
-    formData.append("file", await compressImage(file));
+    try {
+      const compressed = await compressImage(file);
+      setImagePreview(URL.createObjectURL(compressed));
 
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-      credentials: "include"
-    });
-    const data = await response.json();
-    setUploading(false);
+      const formData = new FormData();
+      formData.append("file", compressed);
 
-    if (response.ok) {
-      const imageField = document.getElementById("admin-image-url") as HTMLInputElement | null;
-      if (imageField) {
-        imageField.value = data.url;
-      }
-      setUploadMessage("Image uploaded successfully.");
-    } else {
-      setUploadMessage(data.error || "Upload failed");
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/upload");
+        xhr.withCredentials = true;
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadMessage(`${Math.round((e.loaded / e.total) * 100)}% uploaded`);
+          }
+        };
+        xhr.onload = () => {
+          setUploading(false);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              const imageField = document.getElementById("admin-image-url") as HTMLInputElement | null;
+              if (imageField) {
+                imageField.value = data.url;
+              }
+              setUploadMessage("Image uploaded successfully.");
+              resolve();
+            } catch (err) {
+              setUploadMessage("Upload succeeded but response invalid");
+              resolve();
+            }
+          } else {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              setUploadMessage(data.error || "Upload failed");
+            } catch (err) {
+              setUploadMessage("Upload failed");
+            }
+            reject(new Error("Upload failed"));
+          }
+        };
+        xhr.onerror = () => {
+          setUploading(false);
+          setUploadMessage("Network error during upload");
+          reject(new Error("Network error"));
+        };
+        xhr.send(formData);
+      });
+    } catch (err) {
+      setUploading(false);
+      setUploadMessage((err as Error)?.message || "Upload failed");
     }
   }
 
