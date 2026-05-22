@@ -16,8 +16,38 @@ export function AdminProductsClient({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
   const [formMessage, setFormMessage] = useState("");
   const [editingCode, setEditingCode] = useState("");
+
+  async function compressImage(file: File) {
+    if (file.type === "image/webp" && file.size <= 1024 * 1024) {
+      return file;
+    }
+
+    const bitmap = await createImageBitmap(file);
+    const maxSize = 1280;
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+
+    context.drawImage(bitmap, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+    if (!blob) {
+      return file;
+    }
+
+    return new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
+  }
 
   async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -25,8 +55,9 @@ export function AdminProductsClient({
 
     setUploading(true);
     setUploadMessage("");
+    setImagePreview(URL.createObjectURL(file));
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", await compressImage(file));
 
     const response = await fetch("/api/upload", {
       method: "POST",
@@ -126,6 +157,7 @@ export function AdminProductsClient({
     setValue("benefits", product.benefits.join(", "));
     setValue("ingredients", product.ingredients?.join(", "));
     setValue("howToUse", product.howToUse?.join(", "));
+    setImagePreview(product.imageUrl || "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -167,6 +199,12 @@ export function AdminProductsClient({
           <Field label="Product image URL"><input id="admin-image-url" name="imageUrl" placeholder="Paste an uploaded image path or a direct URL" style={fieldStyle} /></Field>
           <div style={{ display: "grid", gap: 8 }}>
           <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={handleImageUpload} />
+          {imagePreview ? (
+            <div style={{ width: 180, borderRadius: 18, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imagePreview} alt="Product preview" style={{ width: "100%", display: "block", objectFit: "cover" }} />
+            </div>
+          ) : null}
           {uploading ? <span style={{ color: "var(--muted)" }}>Uploading image...</span> : null}
           {uploadMessage ? (
             <span style={{ color: uploadMessage.includes("success") ? "var(--success)" : "var(--danger)" }}>
