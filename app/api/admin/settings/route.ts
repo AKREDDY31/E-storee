@@ -44,6 +44,7 @@ export async function PATCH(request: Request) {
 
   const updateData: Record<string, unknown> = {};
   if (body.brandName !== undefined) updateData.brandName = String(body.brandName);
+  if (body.siteLogoUrl !== undefined) updateData.siteLogoUrl = String(body.siteLogoUrl);
   if (body.supportPhone !== undefined) updateData.supportPhone = String(body.supportPhone);
   if (body.supportEmail !== undefined) updateData.supportEmail = String(body.supportEmail);
   if (body.whatsappNumber !== undefined) updateData.whatsappNumber = String(body.whatsappNumber);

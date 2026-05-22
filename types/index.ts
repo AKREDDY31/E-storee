@@ -27,6 +27,7 @@ export type Role = "user" | "admin";
 
 export interface StoreSettings {
   brandName: string;
+  siteLogoUrl: string;
   supportPhone: string;
   supportEmail: string;
   whatsappNumber: string;

@@ -128,6 +128,29 @@ img {
   flex-shrink: 0;
 }
 
+.brand-link:hover .brand-copy {
+  transform: translateY(-1px);
+}
+
+.brand-copy {
+  transition: transform 0.2s ease;
+}
+
+.site-logo-mark {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 10px 24px rgba(13, 79, 60, 0.16);
+}
+
+.brand-link:hover .site-logo-mark {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 14px 28px rgba(13, 79, 60, 0.2);
+}
+
 .brand-name {
   font-weight: 900;
 }

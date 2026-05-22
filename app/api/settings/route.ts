@@ -5,6 +5,7 @@ export async function GET() {
   const settings = await getStoreSettings();
   return NextResponse.json({
     brandName: settings.brandName,
+    siteLogoUrl: settings.siteLogoUrl,
     upiId: settings.upiId,
     qrImageUrl: settings.qrImageUrl,
     subscriptionDiscountPercent: settings.subscriptionDiscountPercent,

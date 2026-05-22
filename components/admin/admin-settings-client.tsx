@@ -14,6 +14,42 @@ export function AdminSettingsClient({
   const [error, setError] = useState("");
   const [uploadingQr, setUploadingQr] = useState(false);
   const [qrStatus, setQrStatus] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoStatus, setLogoStatus] = useState("");
+
+  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    setLogoStatus("");
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+      credentials: "include"
+    });
+    const data = await response.json();
+    setUploadingLogo(false);
+
+    if (!response.ok) {
+      setLogoStatus(data.error || "Logo upload failed");
+      return;
+    }
+
+    const logoField = document.getElementById("admin-site-logo-url") as HTMLInputElement | null;
+    if (logoField) {
+      logoField.value = data.url;
+    }
+
+    setSettings((current) => ({
+      ...current,
+      siteLogoUrl: data.url
+    }));
+    setLogoStatus("Logo uploaded successfully. Save settings to publish it.");
+  }
 
   async function handleQrUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -100,6 +136,7 @@ export function AdminSettingsClient({
       <form className="card" onSubmit={handleSettingsSave} style={{ padding: 24, display: "grid", gap: 12 }}>
         <strong>Business and payment details</strong>
         <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <input id="admin-site-logo-url" defaultValue={settings.siteLogoUrl} name="siteLogoUrl" placeholder="Site logo image URL" style={fieldStyle} />
           <input defaultValue={settings.brandName} name="brandName" placeholder="Brand name" style={fieldStyle} />
           <input defaultValue={settings.tagline} name="tagline" placeholder="Tagline" style={fieldStyle} />
           <input defaultValue={settings.announcementText} name="announcementText" placeholder="Top scrolling website update" style={fieldStyle} />
@@ -109,6 +146,27 @@ export function AdminSettingsClient({
           <input defaultValue={settings.upiId} name="upiId" placeholder="UPI ID" style={fieldStyle} />
           <input id="admin-qr-image-url" defaultValue={settings.qrImageUrl} name="qrImageUrl" placeholder="QR image URL" style={fieldStyle} />
           <input defaultValue={settings.subscriptionDiscountPercent} name="subscriptionDiscountPercent" type="number" min="0" max="100" placeholder="Subscription discount %" style={fieldStyle} />
+        </div>
+        <div className="card" style={{ padding: 18, display: "grid", gap: 12, background: "var(--surface-alt)" }}>
+          <strong>Site logo</strong>
+          <input type="file" accept=".jpg,.jpeg,.png,.webp,.svg" onChange={handleLogoUpload} />
+          {uploadingLogo ? <span style={{ color: "var(--muted)" }}>Uploading site logo...</span> : null}
+          {logoStatus ? (
+            <span style={{ color: logoStatus.includes("successfully") ? "var(--success)" : "var(--danger)" }}>{logoStatus}</span>
+          ) : null}
+          {settings.siteLogoUrl ? (
+            <div style={{ width: 180, borderRadius: 20, overflow: "hidden", border: "1px solid var(--border)", background: "white" }}>
+              <Image
+                src={settings.siteLogoUrl}
+                alt="Current site logo"
+                width={180}
+                height={180}
+                style={{ width: "100%", height: "auto", objectFit: "cover" }}
+              />
+            </div>
+          ) : (
+            <span style={{ color: "var(--muted)" }}>No site logo uploaded yet.</span>
+          )}
         </div>
         <div className="card" style={{ padding: 18, display: "grid", gap: 12, background: "var(--surface-alt)" }}>
           <strong>Payment QR</strong>

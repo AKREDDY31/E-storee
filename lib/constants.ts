@@ -11,6 +11,7 @@ export const BRAND = {
 
 export const DEFAULT_STORE_SETTINGS = {
   brandName: BRAND.name,
+  siteLogoUrl: "",
   supportPhone: BRAND.phone,
   supportEmail: BRAND.email,
   whatsappNumber: BRAND.whatsapp,

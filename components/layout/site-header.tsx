@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import Image from "next/image";
 import { Menu, ShoppingCart, User2 } from "lucide-react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import { LogoutButton } from "@/components/shared/logout-button";
 
 export function SiteHeader({
-  brandName
+  brandName,
+  siteLogoUrl
 }: {
   brandName: string;
+  siteLogoUrl?: string;
 }) {
   const { count } = useCart();
   const { session } = useAuth();
@@ -31,9 +34,15 @@ export function SiteHeader({
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <Link href={homeHref} className="brand-link" onClick={closeMenu}>
-          <div style={{ width: 44, height: 44, borderRadius: 16, background: "linear-gradient(135deg, var(--accent), #f1c14f)", display: "grid", placeItems: "center", color: "#543c00", fontWeight: 900 }}>V</div>
-          <div>
+        <Link href={homeHref} className="brand-link" onClick={closeMenu} title={brandName}>
+          <div className="site-logo-mark">
+            {siteLogoUrl ? (
+              <Image src={siteLogoUrl} alt={brandName} fill sizes="44px" style={{ objectFit: "cover" }} />
+            ) : (
+              <div style={{ width: "100%", height: "100%", borderRadius: 16, background: "linear-gradient(135deg, var(--accent), #f1c14f)", display: "grid", placeItems: "center", color: "#543c00", fontWeight: 900 }}>V</div>
+            )}
+          </div>
+          <div className="brand-copy">
             <div className="brand-name">{brandName}</div>
             <div className="brand-subtitle">Natural Living Store</div>
           </div>

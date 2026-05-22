@@ -136,6 +136,7 @@ const settingsSchema = new Schema(
   {
     key: { type: String, default: "store", unique: true },
     brandName: { type: String, default: "Vedics.online" },
+    siteLogoUrl: { type: String, default: "" },
     supportPhone: { type: String, default: "+91 8978905029" },
     supportEmail: { type: String, default: "support@vedics.online" },
     whatsappNumber: { type: String, default: "918978905029" },

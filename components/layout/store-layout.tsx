@@ -14,7 +14,7 @@ export async function StoreLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       ) : null}
-      <SiteHeader brandName={settings.brandName} />
+      <SiteHeader brandName={settings.brandName} siteLogoUrl={settings.siteLogoUrl} />
       <main>{children}</main>
       <SiteFooter settings={settings} />
     </div>

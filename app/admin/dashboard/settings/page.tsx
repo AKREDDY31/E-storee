@@ -5,6 +5,7 @@ export default async function AdminSettingsPage() {
   const settings = await getStoreSettings();
   const safeSettings = {
     brandName: settings.brandName,
+    siteLogoUrl: settings.siteLogoUrl,
     supportPhone: settings.supportPhone,
     supportEmail: settings.supportEmail,
     whatsappNumber: settings.whatsappNumber,
