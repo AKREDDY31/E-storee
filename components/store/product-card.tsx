@@ -6,6 +6,8 @@ import { ProductImage } from "@/components/common/product-image";
 import { useCart } from "@/components/providers/cart-provider";
 import { buildWhatsAppOrderLink, formatCurrency } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
+import { useAuth } from "@/components/providers/auth-provider";
+import { useRouter } from "next/navigation";
 
 export function ProductCard({
   product,
@@ -19,6 +21,8 @@ export function ProductCard({
   productUrl: string;
 }) {
   const { addItem } = useCart();
+  const { session } = useAuth();
+  const router = useRouter();
 
   return (
     <article className="card" style={{ overflow: "hidden", background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(247,244,238,0.96))" }}>
@@ -49,7 +53,14 @@ export function ProductCard({
           <span>{product.purchaseCount || 0} bought</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          <button className="button" type="button" onClick={() => addItem(product)}>
+          <button
+            className="button"
+            type="button"
+            onClick={() => {
+              if (!session?.id) return router.push(`/login?redirect=/shop/${product.slug}`);
+              addItem(product);
+            }}
+          >
             <ShoppingBag size={18} />
             Add to cart
           </button>

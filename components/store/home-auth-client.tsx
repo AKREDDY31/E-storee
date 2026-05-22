@@ -13,7 +13,7 @@ type Mode = "login" | "register";
 
 export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
   const router = useRouter();
-  const { setSession } = useAuth();
+  const { setSession, session } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,11 +70,22 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, flexWrap: "wrap" }}>
             <div>
               <span className="eyebrow">Top Price Drop</span>
-              <h2 style={{ margin: "8px 0 0", fontSize: "clamp(1.4rem, 3.8vw, 2.2rem)" }}>Premium picks with default 30% offer</h2>
+              <h2 style={{ margin: "8px 0 0", fontSize: "clamp(1.4rem, 3.8vw, 2.2rem)" }}>Premium picks with 30% offer</h2>
             </div>
-            <Link href="/shop" className="button secondary" style={{ height: 42 }}>
+            <button
+              className="button secondary"
+              style={{ height: 42 }}
+              type="button"
+              onClick={() => {
+                if (session?.id) {
+                  router.push("/shop");
+                } else {
+                  router.push("/login?redirect=/shop");
+                }
+              }}
+            >
               Explore full catalog
-            </Link>
+            </button>
           </div>
 
           <OfferBanner products={products} />
