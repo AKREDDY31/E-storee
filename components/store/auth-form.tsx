@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 
 export function AuthForm({
@@ -21,11 +21,13 @@ export function AuthForm({
   const router = useRouter();
   const { setSession } = useAuth();
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [otpChannel, setOtpChannel] = useState<"sms" | "whatsapp">("sms");
   const [registerStep, setRegisterStep] = useState<"start" | "verify">("start");
   const [pendingRegister, setPendingRegister] = useState<{ email: string; phone: string } | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -35,13 +37,75 @@ export function AuthForm({
     return null;
   }
 
+  function readField(form: HTMLFormElement, name: string) {
+    const element = form.elements.namedItem(name) as HTMLInputElement | null;
+    return String(element?.value || "").trim();
+  }
+
+  async function sendOtpsFromCurrentForm() {
+    const form = formRef.current;
+    if (!form) return;
+
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    const name = readField(form, "name");
+    const email = readField(form, "email");
+    const phone = readField(form, "phone");
+    const password = readField(form, "password");
+    const confirmPassword = readField(form, "confirmPassword");
+
+    if (!name || !email || !phone || !password) {
+      setError("Please fill name, email, phone, and password first.");
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Password and confirm password do not match");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name, email, phone, password, otpChannel })
+      });
+
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setError(data?.error || "Unable to send OTP. Please try again.");
+        return;
+      }
+
+      setPendingRegister({ email, phone });
+      setRegisterStep("verify");
+      setMessage("OTP sent to your phone and email. Enter both OTPs below to create your account.");
+    } catch {
+      setError("Unable to reach server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setMessage("");
     const formData = new FormData(event.currentTarget);
 
     const isUserRegister = mode === "register" && role === "user";
+
+    if (isUserRegister && registerStep === "start") {
+      setLoading(false);
+      await sendOtpsFromCurrentForm();
+      return;
+    }
 
     const endpoint =
       mode === "register"
@@ -83,15 +147,6 @@ export function AuthForm({
           };
 
     try {
-      if (isUserRegister && registerStep === "start") {
-        const password = String(formData.get("password"));
-        const confirmPassword = String(formData.get("confirmPassword"));
-        if (password !== confirmPassword) {
-          setError("Password and confirm password do not match");
-          return;
-        }
-      }
-
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,16 +158,6 @@ export function AuthForm({
 
       if (!response.ok) {
         setError(data?.error || "Authentication failed");
-        return;
-      }
-
-      if (isUserRegister && registerStep === "start") {
-        setPendingRegister({
-          email: String(formData.get("email")),
-          phone: String(formData.get("phone"))
-        });
-        setRegisterStep("verify");
-        setError("");
         return;
       }
 
@@ -148,14 +193,23 @@ export function AuthForm({
             ))}
           </div>
         </div>
-        <form className="card auth-form" onSubmit={handleSubmit}>
+        <form ref={formRef} className="card auth-form" onSubmit={handleSubmit}>
         <h1 style={{ margin: 0 }}>{title}</h1>
         {mode === "register" && registerStep === "start" ? <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} /> : null}
-        <input required type="email" name="email" placeholder="Email" style={fieldStyle} readOnly={mode === "register" && role === "user" && registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
+        {mode === "register" && role === "user" ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
+            <input required type="email" name="email" placeholder="Email" style={fieldStyle} readOnly={registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
+            <button className="button secondary" type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
+              {loading ? "Sending..." : "Send OTP"}
+            </button>
+          </div>
+        ) : (
+          <input required type="email" name="email" placeholder="Email" style={fieldStyle} />
+        )}
         {mode === "register" ? (
           role === "user" ? (
             <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "110px 1fr auto", gap: 10, alignItems: "center" }}>
                 <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
                 <input
                   required
@@ -168,6 +222,9 @@ export function AuthForm({
                   readOnly={registerStep === "verify"}
                   defaultValue={pendingRegister?.phone || ""}
                 />
+                <button className="button secondary" type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
+                  {loading ? "Sending..." : "Send OTP"}
+                </button>
               </div>
               {registerStep === "start" ? (
                 <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -211,9 +268,16 @@ export function AuthForm({
             Use at least 8 characters with uppercase, lowercase, and a number.
           </span>
         ) : null}
+        {message ? <div style={{ color: "var(--success)" }}>{message}</div> : null}
         {error ? <div style={{ color: "var(--danger)" }}>{error}</div> : null}
         <button className="button" disabled={loading} type="submit">
-          {loading ? "Please wait..." : mode === "register" && role === "user" ? (registerStep === "verify" ? "Verify & Create account" : title) : title}
+          {loading
+            ? "Please wait..."
+            : mode === "register" && role === "user"
+              ? registerStep === "verify"
+                ? "Verify & Create account"
+                : "Send OTPs"
+              : title}
         </button>
         {role === "user" ? (
           <div style={{ color: "var(--muted)" }}>
