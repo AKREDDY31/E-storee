@@ -12,6 +12,8 @@ export function ForgotPasswordForm({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpChannel, setOtpChannel] = useState<"sms" | "whatsapp">("sms");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -19,18 +21,67 @@ export function ForgotPasswordForm({
     setError("");
     setMessage("");
     const formData = new FormData(event.currentTarget);
-    const payload = {
-      role,
-      email: String(formData.get("email")),
-      phone: role === "user" ? String(formData.get("phone")) : undefined,
-      secretCode: role === "admin" ? String(formData.get("secretCode")) : undefined,
-      newPassword: String(formData.get("newPassword"))
-    };
 
-    const response = await fetch("/api/auth/forgot-password", {
+    if (role === "admin") {
+      const payload = {
+        role,
+        email: String(formData.get("email")),
+        secretCode: String(formData.get("secretCode")),
+        newPassword: String(formData.get("newPassword"))
+      };
+
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      setLoading(false);
+
+      if (!response.ok) {
+        setError(data.error || "Reset failed");
+        return;
+      }
+
+      setMessage("Password updated successfully. You can now log in.");
+      event.currentTarget.reset();
+      return;
+    }
+
+    const email = String(formData.get("email"));
+    const phone = String(formData.get("phone"));
+
+    if (!otpSent) {
+      const response = await fetch("/api/auth/password-reset/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, phone, otpChannel })
+      });
+      const data = await response.json();
+      setLoading(false);
+      if (!response.ok) {
+        setError(data.error || "Unable to send OTP");
+        return;
+      }
+      setOtpSent(true);
+      setMessage("OTP sent to your phone. Enter it below to reset your password.");
+      return;
+    }
+
+    const otp = String(formData.get("otp"));
+    const newPassword = String(formData.get("newPassword"));
+    const confirmPassword = String(formData.get("confirmPassword"));
+
+    if (newPassword !== confirmPassword) {
+      setLoading(false);
+      setError("Password and confirm password do not match");
+      return;
+    }
+
+    const response = await fetch("/api/auth/password-reset/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ email, phone, otp, newPassword })
     });
     const data = await response.json();
     setLoading(false);
@@ -41,6 +92,7 @@ export function ForgotPasswordForm({
     }
 
     setMessage("Password updated successfully. You can now log in.");
+    setOtpSent(false);
     event.currentTarget.reset();
   }
 
@@ -58,18 +110,44 @@ export function ForgotPasswordForm({
         <h1 style={{ margin: 0 }}>{title}</h1>
         <input required type="email" name="email" placeholder="Email" style={fieldStyle} />
         {role === "user" ? (
-          <input required name="phone" placeholder="Registered phone number" style={fieldStyle} pattern="\d{10}" title="Phone number must be 10 digits" />
+          <>
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
+                <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
+                <input required name="phone" placeholder="Phone number" style={fieldStyle} inputMode="numeric" pattern="\d{10}" title="Phone number must be 10 digits" />
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Send OTP via</span>
+                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} />
+                  <span>SMS</span>
+                </label>
+                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="radio" name="otpChannel" checked={otpChannel === "whatsapp"} onChange={() => setOtpChannel("whatsapp")} />
+                  <span>WhatsApp</span>
+                </label>
+              </div>
+            </div>
+            {otpSent ? <input required name="otp" placeholder="Enter OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" /> : null}
+          </>
         ) : (
           <input required name="secretCode" placeholder="Current admin secret code" style={fieldStyle} />
         )}
-        <input required type="password" minLength={8} name="newPassword" placeholder="New password" style={fieldStyle} />
-        <span style={{ color: "var(--muted)", fontSize: 13 }}>
-          Password must be at least 8 characters and include uppercase, lowercase, and a number.
-        </span>
+        {role === "admin" || otpSent ? (
+          <>
+            <input required type="password" minLength={8} name="newPassword" placeholder="New password" style={fieldStyle} />
+            {role === "user" ? (
+              <input required type="password" minLength={8} name="confirmPassword" placeholder="Confirm password" style={fieldStyle} />
+            ) : null}
+            <span style={{ color: "var(--muted)", fontSize: 13 }}>
+              Password must be at least 8 characters and include uppercase, lowercase, and a number.
+            </span>
+          </>
+        ) : null}
         {error ? <div style={{ color: "var(--danger)" }}>{error}</div> : null}
         {message ? <div style={{ color: "var(--success)" }}>{message}</div> : null}
         <button className="button" disabled={loading} type="submit">
-          {loading ? "Updating..." : "Reset password"}
+          {loading ? "Please wait..." : role === "user" ? (otpSent ? "Reset password" : "Send OTP") : "Reset password"}
         </button>
       </form>
       </div>

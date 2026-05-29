@@ -64,11 +64,7 @@ export async function POST(request: Request) {
     const price = Number((dbProduct as any)?.price ?? item.price ?? 0);
     return sum + price * item.quantity;
   }, 0);
-  const shippingCharge = parsed.data.items.reduce((sum, item) => {
-    const dbProduct = item._id ? productMap.get(item._id) : undefined;
-    const deliveryPrice = typeof (dbProduct as any)?.deliveryPrice === "number" ? Number((dbProduct as any).deliveryPrice) : 60;
-    return sum + deliveryPrice * item.quantity;
-  }, 0);
+  const shippingCharge = parsed.data.items.length > 0 ? 60 : 0;
   const requestedSubscriptionPhone = normalizePhoneNumber(parsed.data.subscriptionPhone || "");
   const storedSubscriptionPhone = normalizePhoneNumber(user.subscriptionPhone || user.phone || "");
   const subscriptionEligible = Boolean(

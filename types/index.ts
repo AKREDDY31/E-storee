@@ -90,6 +90,8 @@ export interface AuthSession {
   name: string;
   email: string;
   phone?: string;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
   role: Role;
   subscriptionStatus?: "inactive" | "pending" | "verified";
   subscriptionActive?: boolean;

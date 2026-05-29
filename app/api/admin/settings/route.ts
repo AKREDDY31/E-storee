@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentSession, hashPassword } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
-import { SettingsModel } from "@/lib/db/models";
+import { SettingsModel, UserModel } from "@/lib/db/models";
 import { ensureStoreSettings, invalidateStoreCaches } from "@/lib/queries";
 import { validateAdminSecret } from "@/lib/server-utils";
+import { broadcastNotification } from "@/lib/notifications";
 
 export async function GET() {
   const session = await getCurrentSession();
@@ -68,6 +69,48 @@ export async function PATCH(request: Request) {
   const updated = await SettingsModel.findOneAndUpdate({ key: "store" }, updateData, {
     new: true
   }).lean();
+
+  void (async () => {
+    try {
+      const changes: string[] = [];
+      const before = settings as any;
+      const after = updated as any;
+
+      const watchKeys: Array<{ key: string; label: string }> = [
+        { key: "courierDetails", label: "Delivery / courier details" },
+        { key: "announcementText", label: "Announcement" },
+        { key: "supportPhone", label: "Support phone" },
+        { key: "supportEmail", label: "Support email" },
+        { key: "whatsappNumber", label: "Support WhatsApp" },
+        { key: "subscriptionDiscountPercent", label: "Subscription discount" }
+      ];
+
+      for (const item of watchKeys) {
+        if (updateData[item.key] !== undefined && String(before?.[item.key] ?? "") !== String(after?.[item.key] ?? "")) {
+          changes.push(item.label);
+        }
+      }
+
+      if (changes.length === 0) return;
+
+      const subject = "Store update";
+      const message = `We updated: ${changes.join(", ")}.`;
+
+      const users = await UserModel.find({ role: "user", phoneVerified: true, emailVerified: true }).lean();
+      const targets = users
+        .map((user) => ({
+          email: String((user as any).email || ""),
+          name: String((user as any).name || ""),
+          phoneE164: String((user as any).phoneE164 || "")
+        }))
+        .filter((user) => user.email && user.name && user.phoneE164);
+
+      await broadcastNotification({ subject, message, users: targets });
+    } catch {
+      // best-effort
+    }
+  })();
+
   invalidateStoreCaches();
   revalidatePath("/");
   revalidatePath("/about");

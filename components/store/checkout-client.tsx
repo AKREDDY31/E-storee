@@ -41,10 +41,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
   const [subscriptionPhone, setSubscriptionPhone] = useState(session?.subscriptionPhone || session?.phone || "");
   const [submitting, setSubmitting] = useState(false);
 
-  const shipping = items.reduce(
-    (sum, item) => sum + (typeof item.deliveryPrice === "number" ? item.deliveryPrice : 60) * item.quantity,
-    0
-  );
+  const shipping = items.length > 0 ? 60 : 0;
   const baseTotal = total + shipping;
   const normalizedSubscriptionPhone = useMemo(() => normalizePhoneNumber(subscriptionPhone), [subscriptionPhone]);
   const normalizedSessionPhone = normalizePhoneNumber(session?.subscriptionPhone || session?.phone || "");

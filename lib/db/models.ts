@@ -5,6 +5,9 @@ const userSchema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String },
+    phoneE164: { type: String, default: "" },
+    phoneVerified: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     subscriptionStatus: { type: String, enum: ["inactive", "pending", "verified"], default: "inactive" },
@@ -23,6 +26,22 @@ const userSchema = new Schema(
       postalCode: String,
       landmark: String
     }
+  },
+  { timestamps: true }
+);
+
+const verificationSchema = new Schema(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User" },
+    purpose: {
+      type: String,
+      enum: ["register_phone", "register_email", "reset_password"],
+      required: true
+    },
+    target: { type: String, required: true },
+    otpHash: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+    consumedAt: { type: Date }
   },
   { timestamps: true }
 );
@@ -164,12 +183,14 @@ const settingsSchema = new Schema(
 );
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
+export type VerificationDocument = InferSchemaType<typeof verificationSchema>;
 export type ProductDocument = InferSchemaType<typeof productSchema>;
 export type OrderDocument = InferSchemaType<typeof orderSchema>;
 export type RefundDocument = InferSchemaType<typeof refundSchema>;
 export type SettingsDocument = InferSchemaType<typeof settingsSchema>;
 
 export const UserModel = (models.User as Model<UserDocument>) || model<UserDocument>("User", userSchema);
+export const VerificationModel = (models.Verification as Model<VerificationDocument>) || model<VerificationDocument>("Verification", verificationSchema);
 export const ProductModel = (models.Product as Model<ProductDocument>) || model<ProductDocument>("Product", productSchema);
 export const OrderModel = (models.Order as Model<OrderDocument>) || model<OrderDocument>("Order", orderSchema);
 export const RefundModel = (models.Refund as Model<RefundDocument>) || model<RefundDocument>("Refund", refundSchema);

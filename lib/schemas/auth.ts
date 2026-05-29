@@ -12,6 +12,17 @@ export const registerSchema = z.object({
     .regex(/\d/, "Password must contain at least one number")
 });
 
+export const registerStartSchema = registerSchema.extend({
+  otpChannel: z.enum(["sms", "whatsapp"])
+});
+
+export const registerVerifySchema = z.object({
+  email: z.string().trim().email("Enter a valid email address"),
+  phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
+  phoneOtp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP"),
+  emailOtp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP")
+});
+
 export const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -42,4 +53,17 @@ export const forgotPasswordSchema = z.object({
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/\d/, "Password must contain at least one number")
+});
+
+export const passwordResetStartSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address"),
+  phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
+  otpChannel: z.enum(["sms", "whatsapp"])
+});
+
+export const passwordResetVerifySchema = z.object({
+  email: z.string().trim().email("Enter a valid email address"),
+  phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
+  otp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP"),
+  newPassword: forgotPasswordSchema.shape.newPassword
 });

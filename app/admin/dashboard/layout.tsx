@@ -26,6 +26,7 @@ export default async function AdminDashboardLayout({
             <Link className="nav-link" href="/admin/dashboard/orders">Orders</Link>
             <Link className="nav-link" href="/admin/dashboard/refunds">Refunds</Link>
             <Link className="nav-link" href="/admin/dashboard/users">Users</Link>
+            <Link className="nav-link" href="/admin/dashboard/notifications">Notifications</Link>
             <Link className="nav-link" href="/admin/dashboard/settings">Settings</Link>
             <Link className="nav-link" href="/">View Store</Link>
             <div style={{ paddingTop: 8 }}>

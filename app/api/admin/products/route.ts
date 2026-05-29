@@ -6,6 +6,7 @@ import { ProductModel, UserModel } from "@/lib/db/models";
 import { invalidateStoreCaches } from "@/lib/queries";
 import { productSchema } from "@/lib/schemas/product";
 import { slugify } from "@/lib/utils";
+import { broadcastNotification } from "@/lib/notifications";
 
 async function requireAdminSession() {
   const session = await getCurrentSession();
@@ -123,6 +124,32 @@ export async function POST(request: Request) {
   revalidatePath("/");
   revalidatePath("/shop");
   revalidatePath("/shop/[slug]");
+
+  void (async () => {
+    try {
+      const isNew = !existingProduct;
+      const discountChanged = Boolean(existingProduct && Number(existingProduct.discountPercent || 0) !== discountPercent);
+      if (!isNew && !discountChanged) return;
+
+      const subject = isNew ? "New product added" : "Product discount updated";
+      const message = isNew
+        ? `${data.name} is now available on Vedics.online.`
+        : `${data.name} discount changed from ${Number(existingProduct?.discountPercent || 0)}% to ${discountPercent}%.`;
+
+      const users = await UserModel.find({ role: "user", phoneVerified: true, emailVerified: true }).lean();
+      const targets = users
+        .map((user) => ({
+          email: String((user as any).email || ""),
+          name: String((user as any).name || ""),
+          phoneE164: String((user as any).phoneE164 || "")
+        }))
+        .filter((user) => user.email && user.name && user.phoneE164);
+
+      await broadcastNotification({ subject, message, users: targets });
+    } catch {
+      // best-effort notifications; do not block product changes
+    }
+  })();
 
   return NextResponse.json({ product: JSON.parse(JSON.stringify(product)) });
 }
