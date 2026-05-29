@@ -77,10 +77,19 @@ export async function POST(request: Request) {
     }
   ]);
 
-  await Promise.all([
-    sendPhoneOtp({ channel: parsed.data.otpChannel, phoneE164, otp: "000000" }),
-    sendEmailOtp({ email: parsed.data.email, name: parsed.data.name, otp: otpEmail })
-  ]);
+  try {
+    await Promise.all([
+      sendPhoneOtp({ channel: parsed.data.otpChannel, phoneE164, otp: "000000" }),
+      sendEmailOtp({ email: parsed.data.email, name: parsed.data.name, otp: otpEmail })
+    ]);
+  } catch (error) {
+    const raw = (error as Error)?.message || "Unable to send OTP";
+    const missingEnvMatch = raw.match(/Missing env ([A-Z0-9_]+)/);
+    const safeMessage = missingEnvMatch
+      ? `Server configuration missing: ${missingEnvMatch[1]}`
+      : "Unable to send OTP right now. Please try again.";
+    return NextResponse.json({ error: safeMessage }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, requiresVerification: true }, { status: 201 });
 }

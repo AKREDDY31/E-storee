@@ -197,9 +197,9 @@ export function AuthForm({
         <h1 style={{ margin: 0 }}>{title}</h1>
         {mode === "register" && registerStep === "start" ? <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} /> : null}
         {mode === "register" && role === "user" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
-            <input required type="email" name="email" placeholder="Email" style={fieldStyle} readOnly={registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
-            <button className="button secondary" type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 10, alignItems: "center" }}>
+            <input required type="email" name="email" placeholder="Email" style={{ ...fieldStyle, minWidth: 0 }} readOnly={registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
+            <button className="button secondary" style={sendOtpButtonStyle} type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
               {loading ? "Sending..." : "Send OTP"}
             </button>
           </div>
@@ -209,20 +209,20 @@ export function AuthForm({
         {mode === "register" ? (
           role === "user" ? (
             <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "110px 1fr auto", gap: 10, alignItems: "center" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "110px minmax(0, 1fr) auto", gap: 10, alignItems: "center" }}>
                 <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
                 <input
                   required
                   name="phone"
                   placeholder="Phone number"
-                  style={fieldStyle}
+                  style={{ ...fieldStyle, minWidth: 0 }}
                   inputMode="numeric"
                   pattern="\d{10}"
                   title="Phone number must be 10 digits"
                   readOnly={registerStep === "verify"}
                   defaultValue={pendingRegister?.phone || ""}
                 />
-                <button className="button secondary" type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
+                <button className="button secondary" style={sendOtpButtonStyle} type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
                   {loading ? "Sending..." : "Send OTP"}
                 </button>
               </div>
@@ -319,4 +319,10 @@ const fieldStyle: CSSProperties = {
   borderRadius: 14,
   border: "1px solid var(--border)",
   padding: "0 14px"
+};
+
+const sendOtpButtonStyle: CSSProperties = {
+  height: 48,
+  padding: "0 18px",
+  whiteSpace: "nowrap"
 };
