@@ -62,6 +62,10 @@ export async function POST(request: Request) {
           role: "user"
         });
 
+  if (!user) {
+    return NextResponse.json({ error: "Unable to start verification. Please try again." }, { status: 500 });
+  }
+
   await VerificationModel.deleteMany({ userId: user._id, purpose: { $in: ["register_phone", "register_email"] } });
   await VerificationModel.create([
     {
