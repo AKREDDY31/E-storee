@@ -27,29 +27,40 @@ export async function POST(request: Request) {
   const otpEmail = generateOtp(6);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  const user = existing
-    ? await UserModel.findOneAndUpdate(
-        { _id: existing._id },
-        {
+  const user =
+    existing
+      ? ((await UserModel.findOneAndUpdate(
+          { _id: existing._id },
+          {
+            name: parsed.data.name,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+            phoneE164,
+            phoneVerified: false,
+            emailVerified: false
+          },
+          { new: true }
+        )) ??
+          (await UserModel.create({
+            name: parsed.data.name,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+            phoneE164,
+            phoneVerified: false,
+            emailVerified: false,
+            passwordHash: await hashPassword(parsed.data.password),
+            role: "user"
+          })))
+      : await UserModel.create({
           name: parsed.data.name,
           email: parsed.data.email,
           phone: parsed.data.phone,
           phoneE164,
           phoneVerified: false,
-          emailVerified: false
-        },
-        { new: true }
-      )
-    : await UserModel.create({
-        name: parsed.data.name,
-        email: parsed.data.email,
-        phone: parsed.data.phone,
-        phoneE164,
-        phoneVerified: false,
-        emailVerified: false,
-        passwordHash: await hashPassword(parsed.data.password),
-        role: "user"
-      });
+          emailVerified: false,
+          passwordHash: await hashPassword(parsed.data.password),
+          role: "user"
+        });
 
   await VerificationModel.deleteMany({ userId: user._id, purpose: { $in: ["register_phone", "register_email"] } });
   await VerificationModel.create([
