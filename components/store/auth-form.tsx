@@ -231,6 +231,19 @@ export function AuthForm({
                     <span>{phoneVerified ? "Verified" : phoneOtpSent ? "OTP sent" : "Pending"}</span>
                   </div>
                 </div>
+                {!phoneVerified ? (
+                  <div className="otp-channel-row otp-channel-row--card">
+                    <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Send phone OTP via</span>
+                    <label className="otp-channel-pill">
+                      <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} />
+                      <span>SMS</span>
+                    </label>
+                    <label className="otp-channel-pill">
+                      <input type="radio" name="otpChannel" checked={otpChannel === "whatsapp"} onChange={() => setOtpChannel("whatsapp")} />
+                      <span>WhatsApp</span>
+                    </label>
+                  </div>
+                ) : null}
                 <div className="otp-input-row otp-input-row--phone">
                   <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
                   <input
@@ -321,17 +334,6 @@ export function AuthForm({
                 ) : null}
               </div>
 
-              <div className="otp-channel-row">
-                <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Phone OTP via</span>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} disabled={registrationLocked} />
-                  <span>SMS</span>
-                </label>
-                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input type="radio" name="otpChannel" checked={otpChannel === "whatsapp"} onChange={() => setOtpChannel("whatsapp")} disabled={registrationLocked} />
-                  <span>WhatsApp</span>
-                </label>
-              </div>
             </div>
           ) : mode === "register" ? (
             <input required name="phone" placeholder="Phone" style={fieldStyle} pattern="\d{10}" title="Phone number must be 10 digits" />

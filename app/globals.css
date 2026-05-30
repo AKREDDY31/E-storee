@@ -389,6 +389,28 @@ img {
   flex-wrap: wrap;
 }
 
+.otp-channel-row--card {
+  justify-content: flex-start;
+}
+
+.otp-channel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(13, 79, 60, 0.14);
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.otp-channel-pill input {
+  margin: 0;
+}
+
 .verification-code-row {
   display: grid;
   gap: 8px;
