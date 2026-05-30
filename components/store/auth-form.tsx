@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { Check } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 
 export function AuthForm({
@@ -25,7 +26,12 @@ export function AuthForm({
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [otpChannel, setOtpChannel] = useState<"sms" | "whatsapp">("sms");
-  const [registerStep, setRegisterStep] = useState<"start" | "verify">("start");
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
   const [pendingRegister, setPendingRegister] = useState<{ email: string; phone: string } | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
 
@@ -42,7 +48,7 @@ export function AuthForm({
     return String(element?.value || "").trim();
   }
 
-  async function sendOtpsFromCurrentForm() {
+  async function sendOtp(target: "phone" | "email") {
     const form = formRef.current;
     if (!form) return;
 
@@ -73,7 +79,14 @@ export function AuthForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name, email, phone, password, otpChannel })
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          password,
+          otpChannel: target === "phone" ? otpChannel : undefined,
+          sendTarget: target
+        })
       });
 
       const data = (await response.json().catch(() => null)) as { error?: string } | null;
@@ -83,8 +96,15 @@ export function AuthForm({
       }
 
       setPendingRegister({ email, phone });
-      setRegisterStep("verify");
-      setMessage("OTP sent to your phone and email. Enter both OTPs below to create your account.");
+      if (target === "phone") {
+        setPhoneOtpSent(true);
+        setPhoneVerified(false);
+        setMessage("Phone OTP sent. Enter the code in the phone container.");
+      } else {
+        setEmailOtpSent(true);
+        setEmailVerified(false);
+        setMessage("Email OTP sent. Enter the code in the email container.");
+      }
     } catch {
       setError("Unable to reach server. Please try again.");
     } finally {
@@ -100,10 +120,11 @@ export function AuthForm({
     const formData = new FormData(event.currentTarget);
 
     const isUserRegister = mode === "register" && role === "user";
+    const verificationReady = phoneOtpSent && emailOtpSent;
 
-    if (isUserRegister && registerStep === "start") {
+    if (isUserRegister && !verificationReady) {
+      setError("Send both the phone and email OTPs first.");
       setLoading(false);
-      await sendOtpsFromCurrentForm();
       return;
     }
 
@@ -111,9 +132,7 @@ export function AuthForm({
       mode === "register"
         ? role === "admin"
           ? "/api/auth/admin-register"
-          : registerStep === "verify"
-            ? "/api/auth/register/verify"
-            : "/api/auth/register"
+          : "/api/auth/register/verify"
         : "/api/auth/login";
 
     const body =
@@ -126,20 +145,12 @@ export function AuthForm({
               password: String(formData.get("password")),
               secretCode: String(formData.get("secretCode"))
             }
-          : registerStep === "verify"
-            ? {
-                email: pendingRegister?.email || String(formData.get("email")),
-                phone: pendingRegister?.phone || String(formData.get("phone")),
-                phoneOtp: String(formData.get("phoneOtp")),
-                emailOtp: String(formData.get("emailOtp"))
-              }
-            : {
-                name: String(formData.get("name")),
-                email: String(formData.get("email")),
-                phone: String(formData.get("phone")),
-                password: String(formData.get("password")),
-                otpChannel
-              }
+          : {
+              email: pendingRegister?.email || String(formData.get("email")),
+              phone: pendingRegister?.phone || String(formData.get("phone")),
+              phoneOtp: phoneOtp || String(formData.get("phoneOtp")),
+              emailOtp: emailOtp || String(formData.get("emailOtp"))
+            }
         : {
             email: String(formData.get("email")),
             password: String(formData.get("password")),
@@ -161,6 +172,17 @@ export function AuthForm({
         return;
       }
 
+      if (mode === "register" && role === "user") {
+        setPhoneVerified(true);
+        setEmailVerified(true);
+        setMessage("Phone and email verified successfully.");
+        window.setTimeout(() => {
+          setSession((data?.user as any) ?? null);
+          router.push(redirectPath || "/shop");
+        }, 700);
+        return;
+      }
+
       setSession((data?.user as any) ?? null);
       router.push(redirectPath || (role === "admin" ? "/admin/dashboard" : "/shop"));
     } catch {
@@ -169,6 +191,9 @@ export function AuthForm({
       setLoading(false);
     }
   }
+
+  const verificationReady = phoneOtpSent && emailOtpSent;
+  const registrationLocked = verificationReady || phoneOtpSent || emailOtpSent;
 
   return (
     <div className="container section" style={{ display: "grid", placeItems: "center" }}>
@@ -195,44 +220,125 @@ export function AuthForm({
         </div>
         <form ref={formRef} className="card auth-form" onSubmit={handleSubmit}>
           <h1 style={{ margin: 0 }}>{title}</h1>
-          {mode === "register" && registerStep === "start" ? <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} /> : null}
           {mode === "register" && role === "user" ? (
-            <input required type="email" name="email" placeholder="Email" style={fieldStyle} readOnly={registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
-          ) : (
-            <input required type="email" name="email" placeholder="Email" style={fieldStyle} />
-          )}
+            <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} readOnly={registrationLocked} />
+          ) : mode === "register" ? (
+            <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} />
+          ) : null}
           {mode === "register" && role === "user" ? (
             <div className="otp-stack">
-              <div className="otp-input-row otp-input-row--phone">
-                <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
-                <input
-                  required
-                  name="phone"
-                  placeholder="Phone number"
-                  style={{ ...fieldStyle, minWidth: 0 }}
-                  inputMode="numeric"
-                  pattern="\d{10}"
-                  title="Phone number must be 10 digits"
-                  readOnly={registerStep === "verify"}
-                  defaultValue={pendingRegister?.phone || ""}
-                />
-                <button className="button secondary otp-send-button" type="button" onClick={sendOtpsFromCurrentForm} disabled={loading}>
-                  {loading ? "Sending..." : registerStep === "verify" ? "Resend OTP" : "Send OTP"}
-                </button>
-              </div>
-              {registerStep === "start" ? (
-                <div className="otp-channel-row">
-                  <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Send OTP via</span>
-                  <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} />
-                    <span>SMS</span>
-                  </label>
-                  <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input type="radio" name="otpChannel" checked={otpChannel === "whatsapp"} onChange={() => setOtpChannel("whatsapp")} />
-                    <span>WhatsApp</span>
-                  </label>
+              <div className="verification-card">
+                <div className="verification-card__header">
+                  <div>
+                    <div className="verification-card__label">Phone number</div>
+                    <div className="verification-card__hint">Default code +91</div>
+                  </div>
+                  <div className={`verification-card__status ${phoneVerified ? "verification-card__status--success" : ""}`}>
+                    {phoneVerified ? <Check size={16} /> : null}
+                    <span>{phoneVerified ? "Verified" : phoneOtpSent ? "OTP sent" : "Pending"}</span>
+                  </div>
                 </div>
-              ) : null}
+                <div className="otp-input-row otp-input-row--phone">
+                  <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
+                  <input
+                    required
+                    name="phone"
+                    placeholder="Phone number"
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    inputMode="numeric"
+                    pattern="\d{10}"
+                    title="Phone number must be 10 digits"
+                    readOnly={registrationLocked}
+                    defaultValue={pendingRegister?.phone || ""}
+                  />
+                  {phoneVerified ? (
+                    <div className="otp-verified-badge">
+                      <Check size={16} />
+                      <span>Verified</span>
+                    </div>
+                  ) : (
+                    <button className="button secondary otp-send-button" type="button" onClick={() => sendOtp("phone")} disabled={loading || phoneVerified}>
+                      {loading ? "Sending..." : phoneOtpSent ? "Resend OTP" : "Send OTP"}
+                    </button>
+                  )}
+                </div>
+                {phoneOtpSent && !phoneVerified ? (
+                  <div className="verification-code-row">
+                    <input
+                      required
+                      name="phoneOtp"
+                      placeholder="Enter phone OTP"
+                      style={fieldStyle}
+                      inputMode="numeric"
+                      pattern="\d{6}"
+                      title="OTP must be 6 digits"
+                      value={phoneOtp}
+                      onChange={(event) => setPhoneOtp(event.target.value)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="verification-card">
+                <div className="verification-card__header">
+                  <div>
+                    <div className="verification-card__label">Email address</div>
+                    <div className="verification-card__hint">OTP goes to your inbox</div>
+                  </div>
+                  <div className={`verification-card__status ${emailVerified ? "verification-card__status--success" : ""}`}>
+                    {emailVerified ? <Check size={16} /> : null}
+                    <span>{emailVerified ? "Verified" : emailOtpSent ? "OTP sent" : "Pending"}</span>
+                  </div>
+                </div>
+                <div className="otp-input-row otp-input-row--email">
+                  <input
+                    required
+                    type="email"
+                    name="email"
+                    placeholder="Email"
+                    style={{ ...fieldStyle, minWidth: 0 }}
+                    readOnly={registrationLocked}
+                    defaultValue={pendingRegister?.email || ""}
+                  />
+                  {emailVerified ? (
+                    <div className="otp-verified-badge">
+                      <Check size={16} />
+                      <span>Verified</span>
+                    </div>
+                  ) : (
+                    <button className="button secondary otp-send-button" type="button" onClick={() => sendOtp("email")} disabled={loading || emailVerified}>
+                      {loading ? "Sending..." : emailOtpSent ? "Resend OTP" : "Send OTP"}
+                    </button>
+                  )}
+                </div>
+                {emailOtpSent && !emailVerified ? (
+                  <div className="verification-code-row">
+                    <input
+                      required
+                      name="emailOtp"
+                      placeholder="Enter email OTP"
+                      style={fieldStyle}
+                      inputMode="numeric"
+                      pattern="\d{6}"
+                      title="OTP must be 6 digits"
+                      value={emailOtp}
+                      onChange={(event) => setEmailOtp(event.target.value)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="otp-channel-row">
+                <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Phone OTP via</span>
+                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} disabled={registrationLocked} />
+                  <span>SMS</span>
+                </label>
+                <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="radio" name="otpChannel" checked={otpChannel === "whatsapp"} onChange={() => setOtpChannel("whatsapp")} disabled={registrationLocked} />
+                  <span>WhatsApp</span>
+                </label>
+              </div>
             </div>
           ) : mode === "register" ? (
             <input required name="phone" placeholder="Phone" style={fieldStyle} pattern="\d{10}" title="Phone number must be 10 digits" />
@@ -240,23 +346,13 @@ export function AuthForm({
           {mode === "register" && role === "admin" ? (
             <input required name="secretCode" placeholder="Admin secret code" style={fieldStyle} />
           ) : null}
-          {mode === "register" && role === "user" && registerStep === "verify" ? (
-            <div className="otp-verify-stack">
-              <div className="otp-input-row otp-input-row--verify">
-                <input required name="phoneOtp" placeholder="Phone OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" />
-                <input required name="emailOtp" placeholder="Email OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" />
-              </div>
-              <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                Enter the OTP sent to your phone and email to complete registration.
-              </span>
-            </div>
-          ) : mode === "register" ? (
+          {mode === "register" && role === "user" ? (
             <>
-              <input required type="password" minLength={8} name="password" placeholder="Password" style={fieldStyle} />
-              {mode === "register" && role === "user" ? (
-                <input required type="password" minLength={8} name="confirmPassword" placeholder="Confirm password" style={fieldStyle} />
-              ) : null}
+              <input required type="password" minLength={8} name="password" placeholder="Password" style={fieldStyle} readOnly={registrationLocked} />
+              <input required type="password" minLength={8} name="confirmPassword" placeholder="Confirm password" style={fieldStyle} readOnly={registrationLocked} />
             </>
+          ) : mode === "register" ? (
+            <input required type="password" minLength={8} name="password" placeholder="Password" style={fieldStyle} />
           ) : null}
           {mode === "register" ? (
             <span style={{ color: "var(--muted)", fontSize: 13 }}>
@@ -265,15 +361,21 @@ export function AuthForm({
           ) : null}
           {message ? <div style={{ color: "var(--success)" }}>{message}</div> : null}
           {error ? <div style={{ color: "var(--danger)" }}>{error}</div> : null}
-          <button className="button" disabled={loading} type="submit">
-            {loading
-              ? "Please wait..."
-              : mode === "register" && role === "user"
-                ? registerStep === "verify"
-                  ? "Verify & Create account"
-                  : "Send OTPs"
-                : title}
-          </button>
+          {mode === "register" && role === "user" ? (
+            verificationReady ? (
+              <button className="button" disabled={loading} type="submit">
+                {loading ? "Please wait..." : "Verify & Create account"}
+              </button>
+            ) : (
+              <div className="verification-note">
+                Send both OTPs to unlock account verification.
+              </div>
+            )
+          ) : (
+            <button className="button" disabled={loading} type="submit">
+              {loading ? "Please wait..." : title}
+            </button>
+          )}
           {role === "user" ? (
             <div style={{ color: "var(--muted)" }}>
               {mode === "login" ? (

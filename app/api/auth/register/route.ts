@@ -24,7 +24,8 @@ export async function POST(request: Request) {
   }
 
   const phoneE164 = `+91${parsed.data.phone}`;
-  const otpEmail = generateOtp(6);
+  const sendTarget = parsed.data.sendTarget;
+  const otpEmail = sendTarget === "phone" ? null : generateOtp(6);
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   const user =
@@ -66,22 +67,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unable to start verification. Please try again." }, { status: 500 });
   }
 
-  await VerificationModel.deleteMany({ userId: user._id, purpose: { $in: ["register_phone", "register_email"] } });
-  await VerificationModel.create([
-    {
-      userId: user._id,
-      purpose: "register_email",
-      target: parsed.data.email,
-      otpHash: hashOtp(otpEmail),
-      expiresAt
-    }
-  ]);
+  if (sendTarget !== "phone") {
+    await VerificationModel.deleteMany({ userId: user._id, purpose: "register_email" });
+    await VerificationModel.create([
+      {
+        userId: user._id,
+        purpose: "register_email",
+        target: parsed.data.email,
+        otpHash: hashOtp(otpEmail || "000000"),
+        expiresAt
+      }
+    ]);
+  }
 
   try {
-    await Promise.all([
-      sendPhoneOtp({ channel: parsed.data.otpChannel, phoneE164, otp: "000000" }),
-      sendEmailOtp({ email: parsed.data.email, name: parsed.data.name, otp: otpEmail })
-    ]);
+    const tasks = [];
+
+    if (sendTarget !== "email") {
+      tasks.push(sendPhoneOtp({ channel: parsed.data.otpChannel || "sms", phoneE164, otp: "000000" }));
+    }
+
+    if (sendTarget !== "phone" && otpEmail) {
+      tasks.push(sendEmailOtp({ email: parsed.data.email, name: parsed.data.name, otp: otpEmail }));
+    }
+
+    await Promise.all(tasks);
   } catch (error) {
     const raw = (error as Error)?.message || "Unable to send OTP";
     const missingEnvMatch = raw.match(/Missing env ([A-Z0-9_]+)/);

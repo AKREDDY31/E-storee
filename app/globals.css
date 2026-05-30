@@ -311,6 +311,54 @@ img {
   gap: 10px;
 }
 
+.verification-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(13, 79, 60, 0.12);
+  border-radius: 18px;
+  background: rgba(247, 244, 238, 0.72);
+}
+
+.verification-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.verification-card__label {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.verification-card__hint {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.verification-card__status,
+.otp-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  background: white;
+  color: var(--muted);
+  border: 1px solid rgba(221, 211, 196, 0.9);
+}
+
+.verification-card__status--success,
+.otp-verified-badge {
+  color: var(--success);
+  border-color: rgba(19, 115, 51, 0.22);
+  background: rgba(19, 115, 51, 0.08);
+}
+
 .otp-verify-stack {
   display: grid;
   gap: 10px;
@@ -330,11 +378,28 @@ img {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
+.otp-input-row--email {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .otp-channel-row {
   display: flex;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.verification-code-row {
+  display: grid;
+  gap: 8px;
+}
+
+.verification-note {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(13, 79, 60, 0.08);
+  color: var(--brand-deep);
+  font-weight: 700;
 }
 
 .otp-send-button {
@@ -357,8 +422,16 @@ img {
     grid-template-columns: 1fr;
   }
 
+  .otp-input-row--email {
+    grid-template-columns: 1fr;
+  }
+
   .otp-send-button {
     width: 100%;
+  }
+
+  .verification-card__header {
+    flex-direction: column;
   }
 }
 

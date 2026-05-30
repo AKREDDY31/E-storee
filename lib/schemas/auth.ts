@@ -13,7 +13,16 @@ export const registerSchema = z.object({
 });
 
 export const registerStartSchema = registerSchema.extend({
-  otpChannel: z.enum(["sms", "whatsapp"])
+  otpChannel: z.enum(["sms", "whatsapp"]).optional(),
+  sendTarget: z.enum(["phone", "email", "both"]).default("both")
+}).superRefine((data, ctx) => {
+  if (data.sendTarget !== "email" && !data.otpChannel) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["otpChannel"],
+      message: "Select a phone OTP delivery method"
+    });
+  }
 });
 
 export const registerVerifySchema = z.object({
