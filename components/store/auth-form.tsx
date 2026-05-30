@@ -60,16 +60,9 @@ export function AuthForm({
     const email = readField(form, "email");
     const phone = readField(form, "phone");
     const password = readField(form, "password");
-    const confirmPassword = readField(form, "confirmPassword");
 
     if (!name || !email || !phone || !password) {
       setError("Please fill name, email, phone, and password first.");
-      setLoading(false);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Password and confirm password do not match");
       setLoading(false);
       return;
     }
