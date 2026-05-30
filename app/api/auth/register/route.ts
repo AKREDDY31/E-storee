@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
+import { authCookieName, createSessionToken, hashPassword } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
 import { UserModel, VerificationModel } from "@/lib/db/models";
-import { registerStartSchema } from "@/lib/schemas/auth";
-import { generateOtp, hashOtp } from "@/lib/otp";
-import { sendEmailOtp, sendPhoneOtp } from "@/lib/notifications";
-import { hashPassword } from "@/lib/auth";
+import { registerCompleteSchema } from "@/lib/schemas/auth";
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const parsed = registerStartSchema.safeParse(body);
+  const parsed = registerCompleteSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -18,88 +16,98 @@ export async function POST(request: Request) {
   }
 
   await connectToDatabase();
-  const existing = await UserModel.findOne({ email: parsed.data.email, role: "user" });
-  if (existing && existing.emailVerified && existing.phoneVerified) {
+  const now = new Date();
+  const phoneE164 = `+91${parsed.data.phone}`;
+
+  const [emailVerification, phoneVerification] = await Promise.all([
+    VerificationModel.findOne({
+      purpose: "register_email",
+      target: parsed.data.email,
+      consumedAt: { $exists: true }
+    })
+      .sort({ updatedAt: -1 })
+      .lean(),
+    VerificationModel.findOne({
+      purpose: "register_phone",
+      target: phoneE164,
+      consumedAt: { $exists: true }
+    })
+      .sort({ updatedAt: -1 })
+      .lean()
+  ]);
+
+  if (!emailVerification || new Date(emailVerification.expiresAt) < now) {
+    return NextResponse.json({ error: "Email is not verified yet" }, { status: 403 });
+  }
+
+  if (!phoneVerification || new Date(phoneVerification.expiresAt) < now) {
+    return NextResponse.json({ error: "Phone number is not verified yet" }, { status: 403 });
+  }
+
+  const existingByEmail = await UserModel.findOne({ email: parsed.data.email });
+  if (existingByEmail && existingByEmail.role !== "user") {
     return NextResponse.json({ error: "Email already registered" }, { status: 409 });
   }
 
-  const phoneE164 = `+91${parsed.data.phone}`;
-  const sendTarget = parsed.data.sendTarget;
-  const otpEmail = sendTarget === "phone" ? null : generateOtp(6);
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-  const user =
-    existing
-      ? ((await UserModel.findOneAndUpdate(
-          { _id: existing._id },
-          {
-            name: parsed.data.name,
-            email: parsed.data.email,
-            phone: parsed.data.phone,
-            phoneE164,
-            phoneVerified: false,
-            emailVerified: false
-          },
-          { new: true }
-        )) ??
-          (await UserModel.create({
-            name: parsed.data.name,
-            email: parsed.data.email,
-            phone: parsed.data.phone,
-            phoneE164,
-            phoneVerified: false,
-            emailVerified: false,
-            passwordHash: await hashPassword(parsed.data.password),
-            role: "user"
-          })))
-      : await UserModel.create({
+  const passwordHash = await hashPassword(parsed.data.password);
+  const user = existingByEmail
+    ? await UserModel.findOneAndUpdate(
+        { _id: existingByEmail._id },
+        {
           name: parsed.data.name,
+          age: parsed.data.age,
           email: parsed.data.email,
           phone: parsed.data.phone,
           phoneE164,
-          phoneVerified: false,
-          emailVerified: false,
-          passwordHash: await hashPassword(parsed.data.password),
+          passwordHash,
+          phoneVerified: true,
+          emailVerified: true,
           role: "user"
-        });
+        },
+        { new: true }
+      )
+    : await UserModel.create({
+        name: parsed.data.name,
+        age: parsed.data.age,
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        phoneE164,
+        passwordHash,
+        phoneVerified: true,
+        emailVerified: true,
+        role: "user"
+      });
 
   if (!user) {
-    return NextResponse.json({ error: "Unable to start verification. Please try again." }, { status: 500 });
+    return NextResponse.json({ error: "Unable to create account. Please try again." }, { status: 500 });
   }
 
-  if (sendTarget !== "phone") {
-    await VerificationModel.deleteMany({ userId: user._id, purpose: "register_email" });
-    await VerificationModel.create([
-      {
-        userId: user._id,
-        purpose: "register_email",
-        target: parsed.data.email,
-        otpHash: hashOtp(otpEmail || "000000"),
-        expiresAt
-      }
-    ]);
-  }
+  await Promise.all([
+    VerificationModel.deleteMany({ purpose: "register_email", target: parsed.data.email }),
+    VerificationModel.deleteMany({ purpose: "register_phone", target: phoneE164 })
+  ]);
 
-  try {
-    const tasks = [];
+  const session = {
+    id: user._id.toString(),
+    name: user.name,
+    age: user.age ?? undefined,
+    email: user.email,
+    phone: user.phone ?? undefined,
+    phoneVerified: true,
+    emailVerified: true,
+    role: user.role,
+    subscriptionStatus: user.subscriptionStatus || "inactive",
+    subscriptionActive: Boolean(user.subscriptionStatus === "verified"),
+    subscriptionPhone: user.subscriptionPhone || ""
+  };
 
-    if (sendTarget !== "email") {
-      tasks.push(sendPhoneOtp({ channel: parsed.data.otpChannel || "sms", phoneE164, otp: "000000" }));
-    }
+  const response = NextResponse.json({ user: session }, { status: 201 });
+  response.cookies.set(authCookieName, createSessionToken(session), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/"
+  });
 
-    if (sendTarget !== "phone" && otpEmail) {
-      tasks.push(sendEmailOtp({ email: parsed.data.email, name: parsed.data.name, otp: otpEmail }));
-    }
-
-    await Promise.all(tasks);
-  } catch (error) {
-    const raw = (error as Error)?.message || "Unable to send OTP";
-    const missingEnvMatch = raw.match(/Missing env ([A-Z0-9_]+)/);
-    const safeMessage = missingEnvMatch
-      ? `Server configuration missing: ${missingEnvMatch[1]}`
-      : "Unable to send OTP right now. Please try again.";
-    return NextResponse.json({ error: safeMessage }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, requiresVerification: true }, { status: 201 });
+  return response;
 }

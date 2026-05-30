@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  age: z.coerce.number().int("Age must be a whole number").min(13, "Age must be at least 13").max(120, "Enter a valid age"),
   email: z.string().trim().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
   password: z
@@ -12,11 +13,17 @@ export const registerSchema = z.object({
     .regex(/\d/, "Password must contain at least one number")
 });
 
-export const registerStartSchema = registerSchema.extend({
+export const registerEmailLinkSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  email: z.string().trim().email("Enter a valid email address")
+});
+
+export const registerPhoneSendSchema = z.object({
+  phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
   otpChannel: z.enum(["sms", "whatsapp"]).optional(),
-  sendTarget: z.enum(["phone", "email", "both"]).default("both")
+  purpose: z.enum(["register", "password_reset"]).default("register")
 }).superRefine((data, ctx) => {
-  if (data.sendTarget !== "email" && !data.otpChannel) {
+  if (!data.otpChannel) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["otpChannel"],
@@ -25,12 +32,27 @@ export const registerStartSchema = registerSchema.extend({
   }
 });
 
-export const registerVerifySchema = z.object({
-  email: z.string().trim().email("Enter a valid email address"),
+export const registerPhoneVerifySchema = z.object({
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
-  phoneOtp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP"),
-  emailOtp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP")
+  otp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP"),
+  purpose: z.enum(["register", "password_reset"]).default("register")
 });
+
+export const registerCompleteSchema = registerSchema.extend({
+  confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters")
+}).superRefine((data, ctx) => {
+  if (data.password !== data.confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["confirmPassword"],
+      message: "Passwords do not match"
+    });
+  }
+});
+
+// Backward-compatible aliases for existing imports.
+export const registerStartSchema = registerEmailLinkSchema;
+export const registerVerifySchema = registerPhoneVerifySchema;
 
 export const loginSchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
@@ -73,6 +95,6 @@ export const passwordResetStartSchema = z.object({
 export const passwordResetVerifySchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
-  otp: z.string().trim().regex(/^\d{6}$/, "Enter a valid 6 digit OTP"),
+  otp: registerPhoneVerifySchema.shape.otp,
   newPassword: forgotPasswordSchema.shape.newPassword
 });

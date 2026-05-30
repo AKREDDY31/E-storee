@@ -17,6 +17,7 @@ export async function GET() {
         user: {
           id: session.id,
           name: user.name,
+          age: user.age ?? undefined,
           email: user.email,
           phone: user.phone ?? undefined,
           role: user.role,

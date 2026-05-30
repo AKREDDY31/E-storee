@@ -88,6 +88,7 @@ export interface CartItem extends ProductCardData {
 export interface AuthSession {
   id: string;
   name: string;
+  age?: number;
   email: string;
   phone?: string;
   phoneVerified?: boolean;

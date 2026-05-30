@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/connect";
-import { UserModel } from "@/lib/db/models";
+import { UserModel, VerificationModel } from "@/lib/db/models";
 import { passwordResetStartSchema } from "@/lib/schemas/auth";
+import { generateOtp, hashOtp } from "@/lib/otp";
 import { sendPhoneOtp } from "@/lib/notifications";
 
 export async function POST(request: Request) {
@@ -30,8 +31,19 @@ export async function POST(request: Request) {
   }
 
   const phoneE164 = `+91${parsed.data.phone}`;
+  const otp = generateOtp(6);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  await sendPhoneOtp({ channel: parsed.data.otpChannel, phoneE164, otp: "000000" });
+  await VerificationModel.deleteMany({ purpose: "reset_password", target: phoneE164 });
+  await VerificationModel.create({
+    purpose: "reset_password",
+    target: phoneE164,
+    otpHash: hashOtp(otp),
+    expiresAt,
+    userId: user._id
+  });
+
+  await sendPhoneOtp({ channel: parsed.data.otpChannel, phoneE164, otp });
 
   return NextResponse.json({ ok: true });
 }

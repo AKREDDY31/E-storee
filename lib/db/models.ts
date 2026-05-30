@@ -3,6 +3,7 @@ import { Schema, model, models, type InferSchemaType, type Model } from "mongoos
 const userSchema = new Schema(
   {
     name: { type: String, required: true },
+    age: { type: Number, min: 13, max: 120 },
     email: { type: String, required: true, unique: true },
     phone: { type: String },
     phoneE164: { type: String, default: "" },

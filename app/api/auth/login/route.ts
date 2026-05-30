@@ -34,6 +34,7 @@ export async function POST(request: Request) {
   const session = {
     id: user._id.toString(),
     name: user.name,
+    age: user.age ?? undefined,
     email: user.email,
     phone: user.phone ?? undefined,
     phoneVerified: Boolean(user.phoneVerified),
