@@ -306,6 +306,43 @@ img {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.otp-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.otp-verify-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.otp-input-row {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+}
+
+.otp-input-row--phone {
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+}
+
+.otp-input-row--verify {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.otp-channel-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.otp-send-button {
+  height: 48px;
+  padding: 0 18px;
+  white-space: nowrap;
+}
+
 @media (max-width: 900px) {
   .auth-panel {
     grid-template-columns: 1fr;
@@ -313,6 +350,15 @@ img {
 
   .auth-form {
     border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  }
+
+  .otp-input-row--phone,
+  .otp-input-row--verify {
+    grid-template-columns: 1fr;
+  }
+
+  .otp-send-button {
+    width: 100%;
   }
 }
 

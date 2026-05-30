@@ -194,22 +194,16 @@ export function AuthForm({
           </div>
         </div>
         <form ref={formRef} className="card auth-form" onSubmit={handleSubmit}>
-        <h1 style={{ margin: 0 }}>{title}</h1>
-        {mode === "register" && registerStep === "start" ? <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} /> : null}
-        {mode === "register" && role === "user" ? (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 10, alignItems: "center" }}>
-            <input required type="email" name="email" placeholder="Email" style={{ ...fieldStyle, minWidth: 0 }} readOnly={registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
-            <button className="button secondary" style={sendOtpButtonStyle} type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
-              {loading ? "Sending..." : "Send OTP"}
-            </button>
-          </div>
-        ) : (
-          <input required type="email" name="email" placeholder="Email" style={fieldStyle} />
-        )}
-        {mode === "register" ? (
-          role === "user" ? (
-            <div style={{ display: "grid", gap: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "110px minmax(0, 1fr) auto", gap: 10, alignItems: "center" }}>
+          <h1 style={{ margin: 0 }}>{title}</h1>
+          {mode === "register" && registerStep === "start" ? <input required minLength={2} name="name" placeholder="Full name" style={fieldStyle} /> : null}
+          {mode === "register" && role === "user" ? (
+            <input required type="email" name="email" placeholder="Email" style={fieldStyle} readOnly={registerStep === "verify"} defaultValue={pendingRegister?.email || ""} />
+          ) : (
+            <input required type="email" name="email" placeholder="Email" style={fieldStyle} />
+          )}
+          {mode === "register" && role === "user" ? (
+            <div className="otp-stack">
+              <div className="otp-input-row otp-input-row--phone">
                 <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
                 <input
                   required
@@ -222,12 +216,12 @@ export function AuthForm({
                   readOnly={registerStep === "verify"}
                   defaultValue={pendingRegister?.phone || ""}
                 />
-                <button className="button secondary" style={sendOtpButtonStyle} type="button" onClick={sendOtpsFromCurrentForm} disabled={loading || registerStep === "verify"}>
-                  {loading ? "Sending..." : "Send OTP"}
+                <button className="button secondary otp-send-button" type="button" onClick={sendOtpsFromCurrentForm} disabled={loading}>
+                  {loading ? "Sending..." : registerStep === "verify" ? "Resend OTP" : "Send OTP"}
                 </button>
               </div>
               {registerStep === "start" ? (
-                <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <div className="otp-channel-row">
                   <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Send OTP via</span>
                   <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} />
@@ -240,75 +234,76 @@ export function AuthForm({
                 </div>
               ) : null}
             </div>
-          ) : (
+          ) : mode === "register" ? (
             <input required name="phone" placeholder="Phone" style={fieldStyle} pattern="\d{10}" title="Phone number must be 10 digits" />
-          )
-        ) : null}
-        {mode === "register" && role === "admin" ? (
-          <input required name="secretCode" placeholder="Admin secret code" style={fieldStyle} />
-        ) : null}
-        {mode === "register" && role === "user" && registerStep === "verify" ? (
-          <>
-            <input required name="phoneOtp" placeholder="Phone OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" />
-            <input required name="emailOtp" placeholder="Email OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" />
+          ) : null}
+          {mode === "register" && role === "admin" ? (
+            <input required name="secretCode" placeholder="Admin secret code" style={fieldStyle} />
+          ) : null}
+          {mode === "register" && role === "user" && registerStep === "verify" ? (
+            <div className="otp-verify-stack">
+              <div className="otp-input-row otp-input-row--verify">
+                <input required name="phoneOtp" placeholder="Phone OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" />
+                <input required name="emailOtp" placeholder="Email OTP" style={fieldStyle} inputMode="numeric" pattern="\d{6}" title="OTP must be 6 digits" />
+              </div>
+              <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                Enter the OTP sent to your phone and email to complete registration.
+              </span>
+            </div>
+          ) : mode === "register" ? (
+            <>
+              <input required type="password" minLength={8} name="password" placeholder="Password" style={fieldStyle} />
+              {mode === "register" && role === "user" ? (
+                <input required type="password" minLength={8} name="confirmPassword" placeholder="Confirm password" style={fieldStyle} />
+              ) : null}
+            </>
+          ) : null}
+          {mode === "register" ? (
             <span style={{ color: "var(--muted)", fontSize: 13 }}>
-              Enter the OTP sent to your phone and email to complete registration.
+              Use at least 8 characters with uppercase, lowercase, and a number.
             </span>
-          </>
-        ) : (
-          <>
-            <input required type="password" minLength={8} name="password" placeholder="Password" style={fieldStyle} />
-            {mode === "register" && role === "user" ? (
-              <input required type="password" minLength={8} name="confirmPassword" placeholder="Confirm password" style={fieldStyle} />
-            ) : null}
-          </>
-        )}
-        {mode === "register" ? (
-          <span style={{ color: "var(--muted)", fontSize: 13 }}>
-            Use at least 8 characters with uppercase, lowercase, and a number.
-          </span>
-        ) : null}
-        {message ? <div style={{ color: "var(--success)" }}>{message}</div> : null}
-        {error ? <div style={{ color: "var(--danger)" }}>{error}</div> : null}
-        <button className="button" disabled={loading} type="submit">
-          {loading
-            ? "Please wait..."
-            : mode === "register" && role === "user"
-              ? registerStep === "verify"
-                ? "Verify & Create account"
-                : "Send OTPs"
-              : title}
-        </button>
-        {role === "user" ? (
-          <div style={{ color: "var(--muted)" }}>
-            {mode === "login" ? (
-              <div style={{ display: "grid", gap: 8 }}>
-                <Link href="/register">New user? Create account</Link>
-                <Link href="/forgot-password">Forgot password?</Link>
-              </div>
-            ) : (
-              <div style={{ display: "grid", gap: 8 }}>
-                <Link href="/login">Already have an account? Login</Link>
-                <Link href="/forgot-password">Forgot password?</Link>
-              </div>
-            )}
+          ) : null}
+          {message ? <div style={{ color: "var(--success)" }}>{message}</div> : null}
+          {error ? <div style={{ color: "var(--danger)" }}>{error}</div> : null}
+          <button className="button" disabled={loading} type="submit">
+            {loading
+              ? "Please wait..."
+              : mode === "register" && role === "user"
+                ? registerStep === "verify"
+                  ? "Verify & Create account"
+                  : "Send OTPs"
+                : title}
+          </button>
+          {role === "user" ? (
+            <div style={{ color: "var(--muted)" }}>
+              {mode === "login" ? (
+                <div style={{ display: "grid", gap: 8 }}>
+                  <Link href="/register">New user? Create account</Link>
+                  <Link href="/forgot-password">Forgot password?</Link>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  <Link href="/login">Already have an account? Login</Link>
+                  <Link href="/forgot-password">Forgot password?</Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ color: "var(--muted)", display: "grid", gap: 8 }}>
+              {mode === "login" ? (
+                <Link href="/admin/register">Create admin account</Link>
+              ) : (
+                <Link href="/admin/login">Already have an admin account? Login</Link>
+              )}
+              <Link href="/admin/forgot-password">Forgot admin password?</Link>
+            </div>
+          )}
+          <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}>
+            {role === "admin"
+              ? "Admin accounts are restricted to the store team. Use the secret code to register a new admin account."
+              : "User accounts store delivery and order details for faster checkout and tracking."}
           </div>
-        ) : (
-          <div style={{ color: "var(--muted)", display: "grid", gap: 8 }}>
-            {mode === "login" ? (
-              <Link href="/admin/register">Create admin account</Link>
-            ) : (
-              <Link href="/admin/login">Already have an admin account? Login</Link>
-            )}
-            <Link href="/admin/forgot-password">Forgot admin password?</Link>
-          </div>
-        )}
-        <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.6 }}>
-          {role === "admin"
-            ? "Admin accounts are restricted to the store team. Use the secret code to register a new admin account."
-            : "User accounts store delivery and order details for faster checkout and tracking."}
-        </div>
-      </form>
+        </form>
       </div>
     </div>
   );
@@ -319,10 +314,4 @@ const fieldStyle: CSSProperties = {
   borderRadius: 14,
   border: "1px solid var(--border)",
   padding: "0 14px"
-};
-
-const sendOtpButtonStyle: CSSProperties = {
-  height: 48,
-  padding: "0 18px",
-  whiteSpace: "nowrap"
 };
