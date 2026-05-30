@@ -393,11 +393,12 @@ img {
   justify-content: flex-start;
 }
 
-.otp-channel-pill {
+.otp-channel-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  justify-content: center;
+  min-width: 92px;
+  padding: 10px 14px;
   border-radius: 999px;
   border: 1px solid rgba(13, 79, 60, 0.14);
   background: white;
@@ -407,8 +408,10 @@ img {
   font-weight: 700;
 }
 
-.otp-channel-pill input {
-  margin: 0;
+.otp-channel-button--active {
+  background: rgba(13, 79, 60, 0.08);
+  border-color: rgba(13, 79, 60, 0.28);
+  color: var(--brand-deep);
 }
 
 .verification-code-row {

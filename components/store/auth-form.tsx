@@ -234,14 +234,8 @@ export function AuthForm({
                 {!phoneVerified ? (
                   <div className="otp-channel-row otp-channel-row--card">
                     <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Send phone OTP via</span>
-                    <label className="otp-channel-pill">
-                      <input type="radio" name="otpChannel" checked={otpChannel === "sms"} onChange={() => setOtpChannel("sms")} />
-                      <span>SMS</span>
-                    </label>
-                    <label className="otp-channel-pill">
-                      <input type="radio" name="otpChannel" checked={otpChannel === "whatsapp"} onChange={() => setOtpChannel("whatsapp")} />
-                      <span>WhatsApp</span>
-                    </label>
+                    <button type="button" className={`otp-channel-button ${otpChannel === "sms" ? "otp-channel-button--active" : ""}`} onClick={() => setOtpChannel("sms")}>SMS</button>
+                    <button type="button" className={`otp-channel-button ${otpChannel === "whatsapp" ? "otp-channel-button--active" : ""}`} onClick={() => setOtpChannel("whatsapp")}>WhatsApp</button>
                   </div>
                 ) : null}
                 <div className="otp-input-row otp-input-row--phone">
