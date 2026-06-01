@@ -195,13 +195,20 @@ export function AuthForm({
               <input
                 required
                 name="age"
+                type="number"
+                min={13}
+                max={120}
                 placeholder="Age"
                 style={fieldStyle}
                 inputMode="numeric"
                 pattern="\d{1,3}"
                 title="Enter a valid age"
                 value={age}
-                onChange={(event) => setAge(event.target.value)}
+                onChange={(event) => {
+                  // allow only digits and limit to 3 chars
+                  const val = String(event.target.value || "").replace(/\D/g, "").slice(0, 3);
+                  setAge(val);
+                }}
               />
               <input
                 required
@@ -221,7 +228,10 @@ export function AuthForm({
                 pattern="\d{10}"
                 title="Phone number must be 10 digits"
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                onChange={(event) => {
+                  const val = String(event.target.value || "").replace(/\D/g, "").slice(0, 10);
+                  setPhone(val);
+                }}
               />
               <div style={{ display: "grid", gap: 8 }}>
                 <input

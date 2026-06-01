@@ -23,8 +23,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Email already registered" }, { status: 409 });
   }
 
-  const passwordHash = await hashPassword(parsed.data.password);
-  const passwordResetSecretHash = await hashPassword(parsed.data.secretCode);
+  const passwordHash = await hashPassword(String(parsed.data.password));
+  const passwordResetSecretHash = await hashPassword(String(parsed.data.secretCode));
   const user = existingByEmail
     ? await UserModel.findOneAndUpdate(
         { _id: existingByEmail._id },

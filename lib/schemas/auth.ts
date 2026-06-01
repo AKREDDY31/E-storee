@@ -7,13 +7,50 @@ const passwordSchema = z
   .regex(/[a-z]/, "Password must contain at least one lowercase letter")
   .regex(/\d/, "Password must contain at least one number");
 
-export const registerSchema = z.object({
+const registerBaseSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  age: z.coerce.number().int("Age must be a whole number").min(13, "Age must be at least 13").max(120, "Enter a valid age"),
+  age: z.coerce.number(),
   email: z.string().trim().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
   password: passwordSchema,
   secretCode: z.string().trim().min(4, "Secret code is required")
+});
+
+export const registerSchema = registerBaseSchema;
+
+export const registerSchemaValidated = registerBaseSchema.superRefine((data, ctx) => {
+  if (!Number.isFinite(data.age)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["age"],
+      message: "Enter a valid age"
+    });
+    return;
+  }
+
+  if (!Number.isInteger(data.age)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["age"],
+      message: "Age must be a whole number"
+    });
+  }
+
+  if (data.age < 13) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["age"],
+      message: "Age must be at least 13"
+    });
+  }
+
+  if (data.age > 120) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["age"],
+      message: "Enter a valid age"
+    });
+  }
 });
 
 export const registerEmailLinkSchema = z.object({
@@ -41,7 +78,7 @@ export const registerPhoneVerifySchema = z.object({
   purpose: z.enum(["register", "password_reset"]).default("register")
 });
 
-export const registerCompleteSchema = registerSchema.extend({
+export const registerCompleteSchema = registerBaseSchema.extend({
   confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters")
 }).superRefine((data, ctx) => {
   if (data.password !== data.confirmPassword) {
