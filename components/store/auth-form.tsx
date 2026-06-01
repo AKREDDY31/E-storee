@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type FormEvent } from "react";
-import { Check } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-
-type OtpChannel = "sms" | "whatsapp";
 
 export function AuthForm({
   mode,
@@ -14,9 +11,7 @@ export function AuthForm({
   title,
   variant = "default",
   redirectPath,
-  initialEmail,
-  initialEmailVerified = false,
-  initialVerificationError = false
+  initialEmail
 }: {
   mode: "login" | "register";
   role: "user" | "admin";
@@ -24,8 +19,6 @@ export function AuthForm({
   variant?: "default" | "admin";
   redirectPath?: string;
   initialEmail?: string;
-  initialEmailVerified?: boolean;
-  initialVerificationError?: boolean;
 }) {
   const router = useRouter();
   const { setSession } = useAuth();
@@ -40,19 +33,11 @@ export function AuthForm({
   const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [otpChannel, setOtpChannel] = useState<OtpChannel>("sms");
-  const [phoneOtp, setPhoneOtp] = useState("");
-
-  const [emailLinkSent, setEmailLinkSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
+  const [secretCode, setSecretCode] = useState("");
   const [phoneOtpSent, setPhoneOtpSent] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (mode !== "register" || role !== "user") return;
@@ -60,13 +45,7 @@ export function AuthForm({
     if (initialEmail) {
       setEmail(initialEmail);
     }
-
-    if (initialEmailVerified) {
-      setEmailVerified(true);
-      setMessage("Email verified successfully. Now verify your phone OTP.");
-      setError("");
-    } else if (initialVerificationError) {
-      setError("Email verification link is invalid or expired. Please send a new link.");
+  }, [mode, role, initialEmail]);
     }
   }, [mode, role, initialEmail, initialEmailVerified, initialVerificationError]);
 
@@ -81,127 +60,23 @@ export function AuthForm({
     setMessage("");
   }
 
-  async function sendEmailVerificationLink() {
-    clearMessages();
-
-    if (!name.trim()) {
-      setError("Please enter your name first.");
-      return;
-    }
-
-    if (!email.trim()) {
-      setError("Please enter your email first.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch("/api/auth/register/email-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email })
-      });
-
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
-      if (!response.ok) {
-        setError(data?.error || "Unable to send email verification link.");
-        return;
-      }
-
-      setEmailLinkSent(true);
-      setMessage("Verification link sent to your email. Open the link to verify.");
-    } catch {
-      setError("Unable to reach server. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function sendPhoneOtp() {
-    clearMessages();
-
-    if (!phone.trim()) {
-      setError("Please enter your mobile number first.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch("/api/auth/register/phone-otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otpChannel, purpose: "register" })
-      });
-
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
-      if (!response.ok) {
-        setError(data?.error || "Unable to send OTP.");
-        return;
-      }
-
-      setPhoneOtpSent(true);
-      setPhoneVerified(false);
-      setMessage("OTP sent to your mobile number.");
-    } catch {
-      setError("Unable to reach server. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function verifyPhoneOtp() {
-    clearMessages();
-
-    if (!phoneOtp.trim()) {
-      setError("Please enter the OTP first.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch("/api/auth/register/phone-otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp: phoneOtp, purpose: "register" })
-      });
-
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
-      if (!response.ok) {
-        setError(data?.error || "OTP verification failed.");
-        return;
-      }
-
-      setPhoneVerified(true);
-      setMessage("Phone number verified successfully.");
-    } catch {
-      setError("Unable to reach server. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearMessages();
 
-    const formData = new FormData(event.currentTarget);
-
     if (isUserRegister) {
-      if (!emailVerified) {
-        setError("Please verify your email first.");
-        return;
-      }
-
-      if (!phoneVerified) {
-        setError("Please verify your mobile OTP first.");
-        return;
-      }
-
       if (password !== confirmPassword) {
         setError("Password and confirm password must match.");
         return;
       }
+
+      if (!secretCode.trim()) {
+        setError("Please enter a secret code for password reset.");
+        return;
+      }
     }
+
+    const formData = new FormData(event.currentTarget);
 
     const endpoint =
       mode === "register"
@@ -226,7 +101,8 @@ export function AuthForm({
               email,
               phone,
               password,
-              confirmPassword
+              confirmPassword,
+              secretCode
             }
         : {
             email: String(formData.get("email") || ""),
@@ -320,127 +196,42 @@ export function AuthForm({
                 onChange={(event) => setAge(event.target.value)}
               />
 
-              <div className="verification-card">
-                <div className="verification-card__header">
-                  <div>
-                    <div className="verification-card__label">Email address</div>
-                    <div className="verification-card__hint">A verification link will be sent</div>
-                  </div>
-                  <div className={`verification-card__status ${emailVerified ? "verification-card__status--success" : ""}`}>
-                    {emailVerified ? <Check size={16} /> : null}
-                    <span>{emailVerified ? "Verified" : emailLinkSent ? "Link sent" : "Pending"}</span>
-                  </div>
-                </div>
+              <input
+                required
+                type="email"
+                name="email"
+                placeholder="Email"
+                style={fieldStyle}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
 
-                <div className="otp-input-row otp-input-row--email">
-                  <input
-                    required
-                    type="email"
-                    name="email"
-                    placeholder="Email"
-                    style={{ ...fieldStyle, minWidth: 0 }}
-                    value={email}
-                    onChange={(event) => {
-                      setEmail(event.target.value);
-                      setEmailVerified(false);
-                    }}
-                  />
-                  {emailVerified ? (
-                    <div className="otp-verified-badge">
-                      <Check size={16} />
-                      <span>Verified</span>
-                    </div>
-                  ) : (
-                    <button
-                      className="button secondary otp-send-button"
-                      type="button"
-                      onClick={sendEmailVerificationLink}
-                      disabled={loading}
-                    >
-                      {loading ? "Please wait..." : emailLinkSent ? "Resend link" : "Verify"}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <input
+                required
+                name="phone"
+                placeholder="Phone number"
+                style={fieldStyle}
+                inputMode="numeric"
+                pattern="\d{10}"
+                title="Phone number must be 10 digits"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+              />
 
-              <div className="verification-card">
-                <div className="verification-card__header">
-                  <div>
-                    <div className="verification-card__label">Mobile number</div>
-                    <div className="verification-card__hint">Send OTP and verify before register</div>
-                  </div>
-                  <div className={`verification-card__status ${phoneVerified ? "verification-card__status--success" : ""}`}>
-                    {phoneVerified ? <Check size={16} /> : null}
-                    <span>{phoneVerified ? "Verified" : phoneOtpSent ? "OTP sent" : "Pending"}</span>
-                  </div>
-                </div>
-
-                {!phoneVerified ? (
-                  <div className="otp-channel-row otp-channel-row--card">
-                    <span style={{ color: "var(--muted)", fontSize: 13, fontWeight: 700 }}>Send OTP via</span>
-                    <button
-                      type="button"
-                      className={`otp-channel-button ${otpChannel === "sms" ? "otp-channel-button--active" : ""}`}
-                      onClick={() => setOtpChannel("sms")}
-                    >
-                      SMS
-                    </button>
-                    <button
-                      type="button"
-                      className={`otp-channel-button ${otpChannel === "whatsapp" ? "otp-channel-button--active" : ""}`}
-                      onClick={() => setOtpChannel("whatsapp")}
-                    >
-                      WhatsApp
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="otp-input-row otp-input-row--phone">
-                  <input value="+91" readOnly style={{ ...fieldStyle, background: "var(--surface-alt)" }} aria-label="Country code" />
-                  <input
-                    required
-                    name="phone"
-                    placeholder="Phone number"
-                    style={{ ...fieldStyle, minWidth: 0 }}
-                    inputMode="numeric"
-                    pattern="\d{10}"
-                    title="Phone number must be 10 digits"
-                    value={phone}
-                    onChange={(event) => {
-                      setPhone(event.target.value);
-                      setPhoneVerified(false);
-                    }}
-                  />
-                  {phoneVerified ? (
-                    <div className="otp-verified-badge">
-                      <Check size={16} />
-                      <span>Verified</span>
-                    </div>
-                  ) : (
-                    <button className="button secondary otp-send-button" type="button" onClick={sendPhoneOtp} disabled={loading}>
-                      {loading ? "Please wait..." : phoneOtpSent ? "Resend OTP" : "Verify"}
-                    </button>
-                  )}
-                </div>
-
-                {phoneOtpSent && !phoneVerified ? (
-                  <div className="verification-code-row" style={{ display: "grid", gap: 10 }}>
-                    <input
-                      required
-                      name="phoneOtp"
-                      placeholder="Enter mobile OTP"
-                      style={fieldStyle}
-                      inputMode="numeric"
-                      pattern="\d{6}"
-                      title="OTP must be 6 digits"
-                      value={phoneOtp}
-                      onChange={(event) => setPhoneOtp(event.target.value)}
-                    />
-                    <button className="button secondary" type="button" onClick={verifyPhoneOtp} disabled={loading}>
-                      {loading ? "Please wait..." : "Verify OTP"}
-                    </button>
-                  </div>
-                ) : null}
+              <div style={{ display: "grid", gap: 8 }}>
+                <input
+                  required
+                  name="secretCode"
+                  type="password"
+                  minLength={4}
+                  placeholder="Secret code for password reset"
+                  style={fieldStyle}
+                  value={secretCode}
+                  onChange={(event) => setSecretCode(event.target.value)}
+                />
+                <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                  This secret code will be used later to reset your password.
+                </span>
               </div>
 
               <input
@@ -474,6 +265,7 @@ export function AuthForm({
               <input required name="phone" placeholder="Phone" style={fieldStyle} pattern="\d{10}" title="Phone number must be 10 digits" />
               {role === "admin" ? <input required name="secretCode" placeholder="Admin secret code" style={fieldStyle} /> : null}
               <input required type="password" minLength={8} name="password" placeholder="Password" style={fieldStyle} />
+              <input required type="password" minLength={8} name="confirmPassword" placeholder="Confirm password" style={fieldStyle} />
             </>
           ) : (
             <>

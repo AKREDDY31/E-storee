@@ -27,10 +27,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
   }
 
-  if (user.role === "user" && (!user.phoneVerified || !user.emailVerified)) {
-    return NextResponse.json({ error: "Please verify your phone and email to continue" }, { status: 403 });
-  }
-
   const session = {
     id: user._id.toString(),
     name: user.name,

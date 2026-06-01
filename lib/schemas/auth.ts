@@ -10,7 +10,8 @@ export const registerSchema = z.object({
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/\d/, "Password must contain at least one number")
+    .regex(/\d/, "Password must contain at least one number"),
+  secretCode: z.string().trim().min(4, "Secret code is required")
 });
 
 export const registerEmailLinkSchema = z.object({
@@ -76,14 +77,22 @@ export const adminRegisterSchema = z.object({
 export const forgotPasswordSchema = z.object({
   role: z.enum(["user", "admin"]),
   email: z.string().trim().email("Enter a valid email address"),
-  phone: z.string().trim().optional(),
-  secretCode: z.string().trim().optional(),
+  secretCode: z.string().trim().min(4, "Secret code is required"),
+  confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters"),
   newPassword: z
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/\d/, "Password must contain at least one number")
+}).superRefine((data, ctx) => {
+  if (data.newPassword !== data.confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["confirmPassword"],
+      message: "Passwords do not match"
+    });
+  }
 });
 
 export const passwordResetStartSchema = z.object({

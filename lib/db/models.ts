@@ -9,6 +9,7 @@ const userSchema = new Schema(
     phoneE164: { type: String, default: "" },
     phoneVerified: { type: Boolean, default: false },
     emailVerified: { type: Boolean, default: false },
+    passwordResetSecretHash: { type: String, default: "" },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     subscriptionStatus: { type: String, enum: ["inactive", "pending", "verified"], default: "inactive" },

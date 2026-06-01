@@ -31,7 +31,9 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
             name: String(formData.get("name")),
             email: String(formData.get("email")),
             phone: String(formData.get("phone")),
-            password: String(formData.get("password"))
+            password: String(formData.get("password")),
+            confirmPassword: String(formData.get("confirmPassword")),
+            secretCode: String(formData.get("secretCode"))
           }
         : {
             email: String(formData.get("email")),
@@ -137,10 +139,28 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
               {mode === "register" ? (
                 <input required name="phone" placeholder="Phone number" style={fieldStyle} pattern="\d{10}" title="Phone number must be 10 digits" />
               ) : null}
+              {mode === "register" ? (
+                <input
+                  required
+                  type="password"
+                  name="secretCode"
+                  placeholder="Secret code for password reset"
+                  style={fieldStyle}
+                  minLength={4}
+                />
+              ) : null}
               <input required type="password" name="password" placeholder="Password" style={fieldStyle} minLength={8} />
+              {mode === "register" ? (
+                <input required type="password" name="confirmPassword" placeholder="Confirm password" style={fieldStyle} minLength={8} />
+              ) : null}
               <span style={{ color: "var(--muted)", fontSize: 13 }}>
                 Use at least 8 characters with uppercase, lowercase, and a number.
               </span>
+              {mode === "register" ? (
+                <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                  The secret code will be used later to reset your password.
+                </span>
+              ) : null}
               {error ? <div style={{ color: "var(--danger)" }}>{error}</div> : null}
               <button className="button" disabled={loading} type="submit">
                 {loading ? "Please wait..." : mode === "login" ? "Login and continue" : "Register and continue"}
