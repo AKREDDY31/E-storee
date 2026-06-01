@@ -74,6 +74,20 @@ export function AuthForm({
       }
     }
 
+    // Basic client-side validation to avoid sending NaN to the server
+    if (mode === "register" && role === "user") {
+      const ageNum = Number(age);
+      if (Number.isNaN(ageNum) || !Number.isInteger(ageNum) || ageNum < 13 || ageNum > 120) {
+        setError("Enter a valid age (13-120).");
+        return;
+      }
+
+      if (!/^\d{10}$/.test(phone.trim())) {
+        setError("Phone number must be 10 digits.");
+        return;
+      }
+    }
+
     const formData = new FormData(event.currentTarget);
 
     const endpoint =
