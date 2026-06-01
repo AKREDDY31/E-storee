@@ -1,16 +1,18 @@
 import { z } from "zod";
 
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/\d/, "Password must contain at least one number");
+
 export const registerSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
   age: z.coerce.number().int("Age must be a whole number").min(13, "Age must be at least 13").max(120, "Enter a valid age"),
   email: z.string().trim().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/\d/, "Password must contain at least one number"),
+  password: passwordSchema,
   secretCode: z.string().trim().min(4, "Secret code is required")
 });
 
@@ -79,12 +81,7 @@ export const forgotPasswordSchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
   secretCode: z.string().trim().min(4, "Secret code is required"),
   confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters"),
-  newPassword: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/\d/, "Password must contain at least one number")
+  newPassword: passwordSchema
 }).superRefine((data, ctx) => {
   if (data.newPassword !== data.confirmPassword) {
     ctx.addIssue({
@@ -105,5 +102,5 @@ export const passwordResetVerifySchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
   otp: registerPhoneVerifySchema.shape.otp,
-  newPassword: forgotPasswordSchema.shape.newPassword
+  newPassword: passwordSchema
 });

@@ -28,26 +28,24 @@ export function AuthForm({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  // User registration state.
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [secretCode, setSecretCode] = useState("");
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (mode !== "register" || role !== "user") return;
-
     if (initialEmail) {
       setEmail(initialEmail);
     }
   }, [mode, role, initialEmail]);
-    }
-  }, [mode, role, initialEmail, initialEmailVerified, initialVerificationError]);
 
   if (!mounted) {
     return null;
@@ -64,7 +62,7 @@ export function AuthForm({
     event.preventDefault();
     clearMessages();
 
-    if (isUserRegister) {
+    if (mode === "register" && role === "user") {
       if (password !== confirmPassword) {
         setError("Password and confirm password must match.");
         return;
@@ -142,10 +140,7 @@ export function AuthForm({
     <div className="container section" style={{ display: "grid", placeItems: "center" }}>
       <div className={`panel auth-panel ${variant === "admin" ? "auth-panel--admin" : ""}`}>
         <div className="auth-hero">
-          <span
-            className="pill"
-            style={{ width: "fit-content", background: "rgba(255,255,255,0.12)", color: "white" }}
-          >
+          <span className="pill" style={{ width: "fit-content", background: "rgba(255,255,255,0.12)", color: "white" }}>
             Secure access
           </span>
           <h1 className="section-title" style={{ margin: 0, fontSize: "clamp(2rem, 3.2vw, 3rem)" }}>
@@ -183,7 +178,6 @@ export function AuthForm({
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
-
               <input
                 required
                 name="age"
@@ -195,7 +189,6 @@ export function AuthForm({
                 value={age}
                 onChange={(event) => setAge(event.target.value)}
               />
-
               <input
                 required
                 type="email"
@@ -205,7 +198,6 @@ export function AuthForm({
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
-
               <input
                 required
                 name="phone"
@@ -217,7 +209,6 @@ export function AuthForm({
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
               />
-
               <div style={{ display: "grid", gap: 8 }}>
                 <input
                   required
@@ -233,7 +224,6 @@ export function AuthForm({
                   This secret code will be used later to reset your password.
                 </span>
               </div>
-
               <input
                 required
                 type="password"
