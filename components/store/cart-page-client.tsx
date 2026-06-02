@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 
 export function CartPageClient() {
   const { items, total, removeItem, updateQuantity } = useCart();
-  const shipping = items.length > 0 ? 60 : 0;
+  const shipping = items.some((item) => Number(item.deliveryPrice || 0) > 0) ? 60 : 0;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   return (

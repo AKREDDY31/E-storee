@@ -23,6 +23,7 @@ export const orderSchema = z.object({
       slug: z.string(),
       itemCode: z.string(),
       price: z.number(),
+      deliveryPrice: z.number().optional(),
       quantity: z.number().min(1),
       imageUrl: z.string().optional()
     })

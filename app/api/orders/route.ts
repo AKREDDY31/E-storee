@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const price = Number((dbProduct as any)?.price ?? item.price ?? 0);
     return sum + price * item.quantity;
   }, 0);
-  const shippingCharge = parsed.data.items.length > 0 ? 60 : 0;
+  const shippingCharge = parsed.data.items.some((item) => Number(item.deliveryPrice || 0) > 0) ? 60 : 0;
   const requestedSubscriptionPhone = normalizePhoneNumber(parsed.data.subscriptionPhone || "");
   const storedSubscriptionPhone = normalizePhoneNumber(user.subscriptionPhone || user.phone || "");
   const subscriptionEligible = Boolean(
