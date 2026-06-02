@@ -9,7 +9,7 @@ const passwordSchema = z
 
 const registerBaseSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  age: z.coerce.number(),
+  age: z.coerce.number().optional(),
   email: z.string().trim().email("Enter a valid email address"),
   phone: z.string().trim().regex(/^\d{10}$/, "Phone number must be 10 digits"),
   password: passwordSchema,
@@ -19,6 +19,10 @@ const registerBaseSchema = z.object({
 export const registerSchema = registerBaseSchema;
 
 export const registerSchemaValidated = registerBaseSchema.superRefine((data, ctx) => {
+  if (data.age == null) {
+    return;
+  }
+
   if (!Number.isFinite(data.age)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

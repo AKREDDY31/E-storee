@@ -24,6 +24,15 @@ export function HomeAuthClient({ products }: { products: ProductCardData[] }) {
     setError("");
     const formData = new FormData(event.currentTarget);
 
+    if (mode === "register") {
+      const phoneValue = String(formData.get("phone") || "").trim();
+      if (!/^\d{10}$/.test(phoneValue)) {
+        setLoading(false);
+        setError("Phone number must be 10 digits.");
+        return;
+      }
+    }
+
     const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
     const body =
       mode === "register"

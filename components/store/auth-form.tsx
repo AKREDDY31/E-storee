@@ -29,7 +29,6 @@ export function AuthForm({
   const [message, setMessage] = useState("");
 
   const [name, setName] = useState("");
-  const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -70,20 +69,6 @@ export function AuthForm({
 
       if (!secretCode.trim()) {
         setError("Please enter a secret code for password reset.");
-        return;
-      }
-    }
-
-    // Basic client-side validation to avoid sending NaN to the server
-    if (mode === "register" && role === "user") {
-      const ageNum = Number(age);
-      if (Number.isNaN(ageNum) || !Number.isInteger(ageNum) || ageNum < 13 || ageNum > 120) {
-        setError("Enter a valid age (13-120).");
-        return;
-      }
-
-      if (!/^\d{10}$/.test(phone.trim())) {
-        setError("Phone number must be 10 digits.");
         return;
       }
     }
@@ -191,24 +176,6 @@ export function AuthForm({
                 style={fieldStyle}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-              />
-              <input
-                required
-                name="age"
-                type="number"
-                min={13}
-                max={120}
-                placeholder="Age"
-                style={fieldStyle}
-                inputMode="numeric"
-                pattern="\d{1,3}"
-                title="Enter a valid age"
-                value={age}
-                onChange={(event) => {
-                  // allow only digits and limit to 3 chars
-                  const val = String(event.target.value || "").replace(/\D/g, "").slice(0, 3);
-                  setAge(val);
-                }}
               />
               <input
                 required
