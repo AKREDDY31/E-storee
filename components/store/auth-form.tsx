@@ -94,7 +94,6 @@ export function AuthForm({
             }
           : {
               name,
-              age: Number(age),
               email,
               phone,
               password,
