@@ -6,6 +6,7 @@ import { CATEGORY_ORDER } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { AdminImageUploadField } from "./admin-image-upload-field";
 import { type ProductCardData } from "@/types";
+import { broadcastProductCatalogUpdate } from "@/lib/product-catalog-sync";
 
 export function AdminProductsClient({
   initialProducts
@@ -42,6 +43,7 @@ export function AdminProductsClient({
       event.currentTarget.reset();
       setEditingCode("");
       setFormMessage(editingCode ? "Product updated successfully." : "Product added successfully.");
+      broadcastProductCatalogUpdate();
       router.refresh();
       return;
     }
@@ -69,6 +71,7 @@ export function AdminProductsClient({
     }
 
     setProducts((current) => current.filter((item) => item.itemCode !== itemCode));
+    broadcastProductCatalogUpdate();
     if (editingCode === itemCode) {
       const form = document.getElementById("admin-product-form") as HTMLFormElement | null;
       form?.reset();

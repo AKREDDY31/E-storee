@@ -1,11 +1,53 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
+import { subscribeToProductCatalogUpdates } from "@/lib/product-catalog-sync";
 
 export function OfferBanner({ products }: { products: ProductCardData[] }) {
-  const offerItems = [...products]
+  const [latestProducts, setLatestProducts] = useState(products);
+
+  useEffect(() => {
+    setLatestProducts(products);
+  }, [products]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshProducts = async () => {
+      try {
+        const response = await fetch("/api/products", { cache: "no-store" });
+        if (!response.ok) return;
+
+        const data = (await response.json().catch(() => null)) as { products?: ProductCardData[] } | null;
+        if (!cancelled && Array.isArray(data?.products)) {
+          setLatestProducts(data.products);
+        }
+      } catch {
+        // Keep showing the existing products if refresh fails.
+      }
+    };
+
+    const unsubscribe = subscribeToProductCatalogUpdates(() => {
+      void refreshProducts();
+    });
+
+    void refreshProducts();
+
+    const intervalId = window.setInterval(() => {
+      void refreshProducts();
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+      unsubscribe();
+    };
+  }, []);
+
+  const offerItems = [...latestProducts]
     .sort((a, b) => (b.mrp || b.price) - (a.mrp || a.price))
     .filter((p) => (p.mrp || p.price) > 200)
     .slice(0, 12)
