@@ -18,8 +18,8 @@ export function invalidateStoreCaches() {
   settingsCache = null;
 }
 
-async function loadAllProducts(): Promise<ProductCardData[]> {
-  if (productsCache && isFresh(productsCache.expiresAt)) {
+async function loadAllProducts(options?: { bypassCache?: boolean }): Promise<ProductCardData[]> {
+  if (!options?.bypassCache && productsCache && isFresh(productsCache.expiresAt)) {
     return productsCache.data;
   }
 
@@ -50,8 +50,9 @@ export async function getProducts(filters?: {
   brand?: string;
   search?: string;
   featured?: boolean;
+  bypassCache?: boolean;
 }) {
-  const products = await loadAllProducts();
+  const products = await loadAllProducts({ bypassCache: filters?.bypassCache });
   return products.filter((product) => {
     if (filters?.category && product.category !== filters.category) return false;
     if (filters?.brand && product.brand !== filters.brand) return false;
@@ -66,6 +67,20 @@ export async function getProducts(filters?: {
 
 export async function getProductBySlug(slug: string) {
   const products = await loadAllProducts();
+  return products.find((product) => product.slug === slug) || null;
+}
+
+export async function getFreshProducts(filters?: {
+  category?: string;
+  brand?: string;
+  search?: string;
+  featured?: boolean;
+}) {
+  return getProducts({ ...filters, bypassCache: true });
+}
+
+export async function getFreshProductBySlug(slug: string) {
+  const products = await loadAllProducts({ bypassCache: true });
   return products.find((product) => product.slug === slug) || null;
 }
 

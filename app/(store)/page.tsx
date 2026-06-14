@@ -1,7 +1,7 @@
 import { HomeAuthClient } from "@/components/store/home-auth-client";
-import { getProducts } from "@/lib/queries";
+import { getFreshProducts } from "@/lib/queries";
 
 export default async function HomePage() {
-  const products = await getProducts();
+  const products = await getFreshProducts();
   return <HomeAuthClient products={products} />;
 }

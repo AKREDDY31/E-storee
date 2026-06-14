@@ -6,7 +6,7 @@ import { ProductRatingPanel } from "@/components/store/product-rating-panel";
 import { getCurrentSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
 import { UserModel } from "@/lib/db/models";
-import { getProductBySlug, getProducts, getStoreSettings } from "@/lib/queries";
+import { getFreshProductBySlug, getFreshProducts, getStoreSettings } from "@/lib/queries";
 import { buildWhatsAppOrderLink, formatAddressLine, formatCurrency } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
 
@@ -16,7 +16,7 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
+  const product = await getFreshProductBySlug(slug);
   const settings = await getStoreSettings();
   const session = await getCurrentSession();
   let customerAddress = "";
@@ -33,7 +33,7 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const related = (await getProducts({ category: product.category })).filter(
+  const related = (await getFreshProducts({ category: product.category })).filter(
     (item: ProductCardData) => item.slug !== product.slug
   );
 
