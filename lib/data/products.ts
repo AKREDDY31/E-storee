@@ -48,7 +48,12 @@ const rawProducts: SeedProductInput[] = [
   { name: "Vedics Neem Aloe Facewash 100ml", price: 174, description: "Deep Cleansing Face Wash. Brand: Vedics Since 2022. MRP ₹249, 30% OFF", itemCode: "VED044" },
   { name: "Vedics Aloe Vera Gel 200gm", price: 196, description: "Pure Aloe Vera Gel. Brand: Vedics Since 2022. MRP ₹280, 30% OFF", itemCode: "VED045" },
   { name: "Vedics Pure Beauty Cream 50gm", price: 349, description: "Herbal Skin Cream. Brand: Vedics Since 2022. MRP ₹499, 30% OFF", itemCode: "VED046" },
-  { name: "Vedics Onion Hair Shampoo 200ml", price: 196, description: "Hair Fall Control. Brand: Vedics Since 2022. MRP ₹280, 30% OFF", itemCode: "VED047" }
+  { name: "Vedics Onion Hair Shampoo 200ml", price: 196, description: "Hair Fall Control. Brand: Vedics Since 2022. MRP ₹280, 30% OFF", itemCode: "VED047" },
+  { name: "Vedicshine Red Herbal Toothpaste 100gm", price: 149, description: "Ayurvedic care for complete oral hygiene. Stronger teeth, healthy gums, fresh breath, cavity protection and no fluoride. Brand: Vedics.online.", itemCode: "VED048" },
+  { name: "Vedicshine Herbal Toothpaste 100gm", price: 149, description: "Herbal toothpaste for strong teeth, healthy gums, germ protection and everyday natural oral care. Brand: Vedics.online.", itemCode: "VED049" },
+  { name: "Arthitus Herbal Pain Relief Oil 60ml", price: 325, description: "Natural relief for joint pain and muscle discomfort. Fast absorbing, non-greasy herbal pain relief oil. Brand: Vedics.online.", itemCode: "VED050" },
+  { name: "MK Biotech Organic Extreme Berries Juice 500ml", price: 553, description: "Antioxidant and immunity booster juice. Sugar free premium berries juice. MRP ₹650, 15% OFF. Brand: MK Biotech.", itemCode: "VED051" },
+  { name: "MK Biotech Sea Buckthorn Juice 500ml", price: 468, description: "Original sea buckthorn juice rich in vitamins and omega 3, 6, 7, 9 support. MRP ₹550, 15% OFF. Brand: MK Biotech.", itemCode: "VED052" }
 ];
 
 export const seedProducts = rawProducts.map(buildSeedProduct);

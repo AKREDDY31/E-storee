@@ -7,7 +7,7 @@ import { getCurrentSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
 import { UserModel } from "@/lib/db/models";
 import { getFreshProductBySlug, getFreshProducts, getStoreSettings } from "@/lib/queries";
-import { buildWhatsAppOrderLink, formatAddressLine, formatCurrency } from "@/lib/utils";
+import { buildWhatsAppOrderLink, formatAddressLine, formatCurrency, getProductPricing } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
 
 export default async function ProductPage({
@@ -33,6 +33,9 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
+  const isSubscriber = session?.subscriptionStatus === "verified";
+  const pricing = getProductPricing(product, isSubscriber);
+  const cartProduct = { ...product, ...pricing };
   const related = (await getFreshProducts({ category: product.category })).filter(
     (item: ProductCardData) => item.slug !== product.slug
   );
@@ -51,9 +54,10 @@ export default async function ProductPage({
           </div>
           <p className="subtitle" style={{ margin: 0 }}>{product.description}</p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-            <strong style={{ fontSize: 34 }}>{formatCurrency(product.price)}</strong>
+            <strong style={{ fontSize: 34 }}>{formatCurrency(pricing.price)}</strong>
             <span style={{ textDecoration: "line-through", color: "var(--muted)" }}>{formatCurrency(product.mrp)}</span>
-            <span style={{ color: "var(--success)", fontWeight: 800 }}>{product.discountPercent}% OFF</span>
+            <span style={{ color: "var(--success)", fontWeight: 800 }}>{pricing.discountPercent}% OFF</span>
+            {isSubscriber && pricing.price < product.price ? <span className="pill">Subscriber price</span> : null}
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", color: "var(--muted)" }}>
             <span>Rating: {product.reviewCount && product.reviewCount > 0 ? product.rating?.toFixed(1) : "Not rated"}</span>
@@ -63,7 +67,7 @@ export default async function ProductPage({
           <div className="card" style={{ padding: 18, display: "grid", gap: 12, background: "white" }}>
             <strong>Payment options</strong>
             <span style={{ color: "var(--muted)" }}>Cash on Delivery available</span>
-            <span style={{ color: "var(--muted)" }}>Online payment accepted with amount locked to {formatCurrency(product.price)}</span>
+            <span style={{ color: "var(--muted)" }}>Online payment accepted with amount locked to {formatCurrency(pricing.price)}</span>
           </div>
           <ProductRatingPanel
             slug={product.slug}
@@ -72,7 +76,7 @@ export default async function ProductPage({
             reviewCount={product.reviewCount || 0}
           />
           <AddToCartButton
-            product={product}
+            product={cartProduct}
             whatsappNumber={settings.whatsappNumber}
             customerAddress={customerAddress}
             productUrl={`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/shop/${product.slug}`}
@@ -85,7 +89,7 @@ export default async function ProductPage({
           </div>
           <Link
             className="button secondary"
-            href={buildWhatsAppOrderLink(product.name, product.price, settings.whatsappNumber, {
+            href={buildWhatsAppOrderLink(product.name, pricing.price, settings.whatsappNumber, {
               productUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/shop/${product.slug}`,
               customerAddress
             })}
@@ -135,7 +139,7 @@ export default async function ProductPage({
                 <ProductImage src={item.imageUrl} alt={item.name} />
               </div>
               <strong>{item.name}</strong>
-              <span style={{ color: "var(--muted)" }}>{formatCurrency(item.price)}</span>
+              <span style={{ color: "var(--muted)" }}>{formatCurrency(getProductPricing(item, isSubscriber).price)}</span>
             </Link>
           ))}
         </div>

@@ -25,9 +25,9 @@ export const DEFAULT_STORE_SETTINGS = {
     "You can request cancellation before shipment, or request a return after delivery from My Orders. For prepaid orders, refund is initiated after pickup and processed within 48 hours after collection.",
   refundPolicyNorms:
     "Refund requests must include a clear reason. Returned products should be unused and in original condition with packaging. Pickup is arranged after approval based on service availability.",
-  subscriptionDiscountPercent: 40,
+  subscriptionDiscountPercent: 30,
   subscriptionBenefits: [
-    "40% discount on eligible subscription checkout orders",
+    "30% minimum discount on product prices",
     "Priority support through the account dashboard",
     "Subscriber badge shown on the profile page"
   ]
@@ -40,6 +40,7 @@ export const CATEGORY_ORDER = [
   "Juices",
   "Syrups",
   "Skin Care",
+  "Pastes",
   "Bone & Joint",
   "Weight Management",
   "Women Care",

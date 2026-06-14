@@ -5,6 +5,7 @@ export type Category =
   | "Juices"
   | "Syrups"
   | "Skin Care"
+  | "Pastes"
   | "Bone & Joint"
   | "Weight Management"
   | "Women Care"

@@ -3,10 +3,18 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
-import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/components/providers/auth-provider";
+import { formatCurrency, getProductPricing } from "@/lib/utils";
 
 export function CartPageClient() {
-  const { items, total, removeItem, updateQuantity } = useCart();
+  const { items, removeItem, updateQuantity } = useCart();
+  const { session } = useAuth();
+  const isSubscriber = session?.subscriptionStatus === "verified";
+  const pricedItems = items.map((item) => ({
+    ...item,
+    pricing: getProductPricing(item, isSubscriber)
+  }));
+  const total = pricedItems.reduce((sum, item) => sum + item.pricing.price * item.quantity, 0);
   const shipping = items.some((item) => Number(item.deliveryPrice || 0) > 0) ? 60 : 0;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
@@ -27,11 +35,12 @@ export function CartPageClient() {
       ) : (
         <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1.3fr) minmax(300px, 0.7fr)", alignItems: "start" }}>
           <div className="card" style={{ padding: 24, display: "grid", gap: 18 }}>
-            {items.map((item) => (
+            {pricedItems.map((item) => (
               <div key={item.slug} style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 18, borderBottom: "1px solid var(--border)", paddingBottom: 16 }}>
                 <div style={{ display: "grid", gap: 8 }}>
                   <strong>{item.name}</strong>
-                  <span style={{ color: "var(--muted)" }}>{formatCurrency(item.price)} each</span>
+                  <span style={{ color: "var(--muted)" }}>{formatCurrency(item.pricing.price)} each</span>
+                  {isSubscriber && item.pricing.price < item.price ? <span className="pill" style={{ width: "fit-content" }}>Subscriber price</span> : null}
                 </div>
                 <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
                   <input

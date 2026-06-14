@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/db/connect";
-import { OrderModel, ProductModel, SettingsModel, UserModel } from "@/lib/db/models";
+import { OrderModel, ProductModel, UserModel } from "@/lib/db/models";
 import { invalidateStoreCaches } from "@/lib/queries";
 import { orderSchema } from "@/lib/schemas/order";
-import { formatAddressLine, normalizePhoneNumber } from "@/lib/utils";
+import { formatAddressLine, getProductPricing, normalizePhoneNumber, SUBSCRIBER_MIN_DISCOUNT_PERCENT } from "@/lib/utils";
 
 function buildOrderNumber() {
   revalidatePath("/shop");
@@ -38,7 +38,6 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-  const settings = (await SettingsModel.findOne({ key: "store" }).lean()) as { subscriptionDiscountPercent?: number } | null;
   const productIds = parsed.data.items.map((item) => item._id).filter(Boolean);
   const dbProducts = await ProductModel.find({ _id: { $in: productIds } }).lean();
   const productMap = new Map(dbProducts.map((product) => [String(product._id), product]));
@@ -59,20 +58,25 @@ export async function POST(request: Request) {
     }
   }
 
-  const subtotal = parsed.data.items.reduce((sum, item) => {
-    const dbProduct = item._id ? productMap.get(item._id) : undefined;
-    const price = Number((dbProduct as any)?.price ?? item.price ?? 0);
-    return sum + price * item.quantity;
-  }, 0);
   const shippingCharge = parsed.data.items.some((item) => Number(item.deliveryPrice || 0) > 0) ? 60 : 0;
   const requestedSubscriptionPhone = normalizePhoneNumber(parsed.data.subscriptionPhone || "");
   const storedSubscriptionPhone = normalizePhoneNumber(user.subscriptionPhone || user.phone || "");
   const subscriptionEligible = Boolean(
     parsed.data.subscriptionEligible && user.subscriptionStatus === "verified" && requestedSubscriptionPhone && requestedSubscriptionPhone === storedSubscriptionPhone
   );
-  const subscriptionDiscountPercent = subscriptionEligible ? Number(settings?.subscriptionDiscountPercent ?? 0) : 0;
-  const discountAmount = Math.min(subtotal, Math.round((subtotal * subscriptionDiscountPercent) / 100));
-  const total = Math.max(0, subtotal - discountAmount + shippingCharge);
+  const subscriptionDiscountPercent = SUBSCRIBER_MIN_DISCOUNT_PERCENT;
+  const normalSubtotal = parsed.data.items.reduce((sum, item) => {
+    const dbProduct = item._id ? productMap.get(item._id) : undefined;
+    const price = Number((dbProduct as any)?.price ?? item.price ?? 0);
+    return sum + price * item.quantity;
+  }, 0);
+  const subtotal = parsed.data.items.reduce((sum, item) => {
+    const dbProduct = item._id ? productMap.get(item._id) : undefined;
+    const pricing = getProductPricing(dbProduct as any, subscriptionEligible, subscriptionDiscountPercent);
+    return sum + pricing.price * item.quantity;
+  }, 0);
+  const discountAmount = Math.max(0, normalSubtotal - subtotal);
+  const total = Math.max(0, subtotal + shippingCharge);
 
   const order = await OrderModel.create({
     ...parsed.data,
@@ -92,7 +96,7 @@ export async function POST(request: Request) {
       name: item.name,
       slug: item.slug,
       itemCode: item.itemCode,
-      price: Number((item._id ? productMap.get(item._id) : undefined)?.price ?? item.price ?? 0),
+      price: getProductPricing(item._id ? (productMap.get(item._id) as any) : item, subscriptionEligible, subscriptionDiscountPercent).price,
       quantity: item.quantity,
       imageUrl: item.imageUrl
     }))

@@ -4,7 +4,7 @@ import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/components/providers/cart-provider";
 import { useAuth } from "@/components/providers/auth-provider";
-import { formatCurrency, normalizePhoneNumber } from "@/lib/utils";
+import { formatCurrency, getProductPricing, normalizePhoneNumber, SUBSCRIBER_MIN_DISCOUNT_PERCENT } from "@/lib/utils";
 import { type StoreSettings } from "@/types";
 
 const formStyle: CSSProperties = {
@@ -33,7 +33,7 @@ function buildUpiPaymentLink(settings: StoreSettings, amount: number) {
 export function CheckoutClient({ settings }: { settings: StoreSettings }) {
   const router = useRouter();
   const { session } = useAuth();
-  const { items, total, clearCart } = useCart();
+  const { items, clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "ONLINE">("COD");
   const [subscriptionChoice, setSubscriptionChoice] = useState<"no" | "yes">(
     session?.subscriptionStatus === "verified" ? "yes" : "no"
@@ -41,8 +41,6 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
   const [subscriptionPhone, setSubscriptionPhone] = useState(session?.subscriptionPhone || session?.phone || "");
   const [submitting, setSubmitting] = useState(false);
 
-  const shipping = items.some((item) => Number(item.deliveryPrice || 0) > 0) ? 60 : 0;
-  const baseTotal = total + shipping;
   const normalizedSubscriptionPhone = useMemo(() => normalizePhoneNumber(subscriptionPhone), [subscriptionPhone]);
   const normalizedSessionPhone = normalizePhoneNumber(session?.subscriptionPhone || session?.phone || "");
   const hasMatchingSubscription =
@@ -50,10 +48,15 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
     session?.subscriptionStatus === "verified" &&
     normalizedSubscriptionPhone.length > 0 &&
     normalizedSubscriptionPhone === normalizedSessionPhone;
-  const subscriptionDiscount = hasMatchingSubscription
-    ? Math.min(baseTotal, Math.round((baseTotal * settings.subscriptionDiscountPercent) / 100))
-    : 0;
-  const grandTotal = Math.max(0, baseTotal - subscriptionDiscount);
+  const pricedItems = items.map((item) => ({
+    ...item,
+    pricing: getProductPricing(item, hasMatchingSubscription)
+  }));
+  const normalSubtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = pricedItems.reduce((sum, item) => sum + item.pricing.price * item.quantity, 0);
+  const shipping = items.some((item) => Number(item.deliveryPrice || 0) > 0) ? 60 : 0;
+  const subscriptionDiscount = Math.max(0, normalSubtotal - subtotal);
+  const grandTotal = Math.max(0, subtotal + shipping);
   const upiPaymentLink = buildUpiPaymentLink(settings, grandTotal);
   const upiQrImageUrl = upiPaymentLink
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiPaymentLink)}`
@@ -82,7 +85,11 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
         postalCode: String(formData.get("postalCode")),
         landmark: String(formData.get("landmark") || "")
       },
-      items,
+      items: pricedItems.map(({ pricing, ...item }) => ({
+        ...item,
+        price: pricing.price,
+        discountPercent: pricing.discountPercent
+      })),
       paymentMethod: "COD",
       paymentReference: "",
       subscriptionEligible: hasMatchingSubscription,
@@ -144,7 +151,11 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
         postalCode: postalVal,
         landmark: String((document.querySelector('input[name="landmark"]') as HTMLInputElement)?.value || "")
       },
-      items,
+      items: pricedItems.map(({ pricing, ...item }) => ({
+        ...item,
+        price: pricing.price,
+        discountPercent: pricing.discountPercent
+      })),
       paymentMethod: "ONLINE",
       paymentReference: "",
       subscriptionEligible: hasMatchingSubscription,
@@ -232,7 +243,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
                 />
                 <div style={{ color: hasMatchingSubscription ? "var(--success)" : "var(--muted)", fontSize: 13 }}>
                   {hasMatchingSubscription
-                    ? `Subscription matched. ${settings.subscriptionDiscountPercent}% discount applied.`
+                    ? `Subscription matched. Product prices now use at least ${SUBSCRIBER_MIN_DISCOUNT_PERCENT}% off.`
                     : "Enter the phone number used for your active subscription to unlock the discount."}
                 </div>
               </div>
@@ -327,15 +338,15 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
 
         <div className="card" style={{ padding: 24, display: "grid", gap: 16, position: "sticky", top: 20 }}>
           <strong>Order summary</strong>
-          {items.map((item) => (
+          {pricedItems.map((item) => (
             <div key={item.slug} style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
               <span>{item.name} x {item.quantity}</span>
-              <strong>{formatCurrency(item.price * item.quantity)}</strong>
+              <strong>{formatCurrency(item.pricing.price * item.quantity)}</strong>
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Subtotal</span>
-            <strong>{formatCurrency(total)}</strong>
+            <strong>{formatCurrency(subtotal)}</strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Shipping</span>
@@ -351,7 +362,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
             <div>
               <div>Total payable</div>
               {subscriptionDiscount > 0 ? (
-                <div style={{ color: "var(--success)", fontSize: 13 }}>Subscription discount applied ({settings.subscriptionDiscountPercent}%): -{formatCurrency(subscriptionDiscount)}</div>
+                <div style={{ color: "var(--success)", fontSize: 13 }}>Subscriber price benefit: -{formatCurrency(subscriptionDiscount)}</div>
               ) : null}
             </div>
             <strong>{formatCurrency(grandTotal)}</strong>

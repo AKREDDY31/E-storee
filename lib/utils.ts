@@ -1,5 +1,7 @@
 import { type Category, type ProductCardData, type SeedProductInput } from "@/types";
 
+export const SUBSCRIBER_MIN_DISCOUNT_PERCENT = 30;
+
 export function slugify(value: string) {
   return value
     .toLowerCase()
@@ -60,8 +62,32 @@ export function formatAddressLine(address?: {
 }
 
 export function extractMrp(description: string, fallbackPrice: number) {
-  const match = description.match(/MRP ₹(\d+)/i);
+  const match = description.match(/MRP\s*(?:\u20b9|Rs\.?|INR)?\s*(\d+)/i);
   return match ? Number(match[1]) : fallbackPrice;
+}
+
+export function calculateDiscountedPrice(mrp: number, discountPercent: number) {
+  return Math.max(1, Math.round(mrp * (1 - discountPercent / 100)));
+}
+
+export function getProductPricing(
+  product: Pick<ProductCardData, "price" | "mrp" | "discountPercent">,
+  isSubscriber: boolean,
+  subscriberDiscountPercent = SUBSCRIBER_MIN_DISCOUNT_PERCENT
+) {
+  const mrp = Number(product.mrp || product.price || 0);
+  const listedPrice = Math.max(1, Number(product.price || mrp || 1));
+  const listedDiscount = Math.max(0, Number(product.discountPercent || 0));
+  const effectiveDiscount = isSubscriber ? Math.max(listedDiscount, subscriberDiscountPercent) : listedDiscount;
+  const discountPrice = mrp > 0 ? calculateDiscountedPrice(mrp, effectiveDiscount) : listedPrice;
+  const price = isSubscriber ? Math.min(listedPrice, discountPrice) : listedPrice;
+  const discountPercent = mrp > 0 ? Math.max(0, Math.round(((mrp - price) / mrp) * 100)) : effectiveDiscount;
+
+  return {
+    price,
+    mrp,
+    discountPercent
+  };
 }
 
 export function inferBrand(name: string, description: string) {
@@ -79,12 +105,13 @@ export function inferCategory(input: Pick<SeedProductInput, "name" | "descriptio
   const text = `${input.name} ${input.description}`.toLowerCase();
 
   if (/(diab|jamun|noni)/.test(text)) return "Diabetes Care";
-  if (/(hair|shampoo|tailam|oil)/.test(text)) return "Hair Care";
+  if (/(toothpaste|paste)/.test(text)) return "Pastes";
+  if (/(joint|bone|calcium|haddjod|ortho|pain relief|muscle)/.test(text)) return "Bone & Joint";
+  if (/(hair|shampoo|tailam|hair oil)/.test(text)) return "Hair Care";
   if (/(triphala|zyme|digestion|antacid|liver|detox|cid|pep)/.test(text)) return "Digestion";
   if (/(juice|ras|drops)/.test(text)) return "Juices";
   if (/(syrup|tonic|care 200ml|mind|ortho|sanjivani|vit|thyro|stone go)/.test(text)) return "Syrups";
   if (/(soap|facewash|gel|cream|beauty|skin)/.test(text)) return "Skin Care";
-  if (/(joint|bone|calcium|haddjod|ortho)/.test(text)) return "Bone & Joint";
   if (/(weight loss|weight gain|shake|fizz|slim)/.test(text)) return "Weight Management";
   if (/(women|uterine|pregnancy|garbh)/.test(text)) return "Women Care";
   return "Wellness";
@@ -96,7 +123,9 @@ export function buildTags(name: string, description: string, category: Category)
   if (/kids/i.test(description)) tags.add("Kids");
   if (/immunity/i.test(description)) tags.add("Immunity");
   if (/ayurvedic|herbal/i.test(description)) tags.add("Ayurvedic");
+  if (/toothpaste|oral hygiene/i.test(description)) tags.add("Oral Care");
   if (/30% off/i.test(description)) tags.add("30% OFF");
+  if (/15% off/i.test(description)) tags.add("15% OFF");
   if (/women/i.test(description)) tags.add("Women Care");
   if (/honey/i.test(name)) tags.add("Natural");
   return Array.from(tags);
@@ -114,7 +143,7 @@ export function buildSeedProduct(input: SeedProductInput, index: number): Produc
   const mrp = extractMrp(input.description, input.price);
   const category = inferCategory(input);
   const brand = inferBrand(input.name, input.description);
-  const discountPercent = Math.round(((mrp - input.price) / mrp) * 100);
+  const discountPercent = mrp > 0 ? Math.round(((mrp - input.price) / mrp) * 100) : 0;
 
   return {
     name: input.name,

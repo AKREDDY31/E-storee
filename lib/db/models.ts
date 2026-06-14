@@ -177,7 +177,7 @@ const settingsSchema = new Schema(
       default:
         "Refund requests must include a clear reason. Returned products should be unused and in original condition with packaging. Pickup is arranged after approval based on service availability."
     },
-    subscriptionDiscountPercent: { type: Number, default: 40 },
+    subscriptionDiscountPercent: { type: Number, default: 30 },
     subscriptionBenefits: { type: [String], default: [] },
     adminSecretHash: { type: String, required: true }
   },

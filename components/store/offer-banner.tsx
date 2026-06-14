@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/components/providers/auth-provider";
+import { formatCurrency, getProductPricing } from "@/lib/utils";
 import { type ProductCardData } from "@/types";
 import { subscribeToProductCatalogUpdates } from "@/lib/product-catalog-sync";
 
 export function OfferBanner({ products }: { products: ProductCardData[] }) {
   const [latestProducts, setLatestProducts] = useState(products);
+  const { session } = useAuth();
+  const isSubscriber = session?.subscriptionStatus === "verified";
 
   useEffect(() => {
     setLatestProducts(products);
@@ -33,16 +36,29 @@ export function OfferBanner({ products }: { products: ProductCardData[] }) {
     const unsubscribe = subscribeToProductCatalogUpdates(() => {
       void refreshProducts();
     });
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshProducts();
+      }
+    };
+    const handleFocus = () => {
+      void refreshProducts();
+    };
 
     void refreshProducts();
 
     const intervalId = window.setInterval(() => {
       void refreshProducts();
-    }, 60_000);
+    }, 15_000);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       cancelled = true;
       clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
       unsubscribe();
     };
   }, []);
@@ -57,11 +73,13 @@ export function OfferBanner({ products }: { products: ProductCardData[] }) {
     .filter((p) => Number(p.mrp || p.price) > 0)
     .slice(0, 12)
     .map((product) => {
+      const pricing = getProductPricing(product, isSubscriber);
+
       return {
         ...product,
         basePrice: Math.max(product.mrp || 0, product.price || 0),
-        offerPrice: Math.max(1, Number(product.price || 0)),
-        discountPercent: Number(product.discountPercent || 0)
+        offerPrice: pricing.price,
+        discountPercent: pricing.discountPercent
       };
     });
 
